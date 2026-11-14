@@ -358,14 +358,19 @@ let detect: DetectInfo = { enabled: false, supported: true, running: false, need
 function renderDetect() {
   const row = $("detect");
   const note = $("detect-note");
-  row.innerHTML = `<label class="app__setting" for="set-detect">${icon("brush-cleaning")}<span>Detect cleaning</span>
+  const blocked = detect.enabled && detect.needsPermission;
+  const label = blocked
+    ? `<span class="app__setting-text"><span>Detect cleaning</span><span class="app__setting-flag">Needs Input Monitoring</span></span>`
+    : `<span>Detect cleaning</span>`;
+  row.innerHTML = `<label class="app__setting" for="set-detect">${icon("brush-cleaning")}${label}
       <button class="hb-switch" id="set-detect" type="button" role="switch" aria-checked="${detect.enabled}" ${detect.supported ? "" : "disabled"}></button></label>`;
   const length = DURATIONS.find((d) => d.secs === (settings.durationSecs ?? 120))?.label ?? "2 min";
+  note.hidden = blocked;
+  renderNotices();
   if (!detect.supported) {
     note.textContent = "Not available on this system yet.";
-  } else if (detect.enabled && detect.needsPermission) {
-    note.innerHTML = `Allow Hushboard in Input Monitoring so it can notice key presses.
-      <span class="app__note-actions"><button class="hb-btn hb-btn--secondary" type="button" data-detect="settings">Open settings</button></span>`;
+  } else if (blocked) {
+    note.textContent = "";
   } else if (detect.enabled) {
     note.textContent = `On. Locks for ${length} when many keys are pressed at once. Only the timing is counted, never which keys.`;
   } else {
@@ -381,9 +386,74 @@ $("detect").addEventListener("click", async (e) => {
   if (detect.enabled) void playOn();
 });
 
-$("detect-note").addEventListener("click", async (e) => {
-  if ((e.target as HTMLElement).closest("[data-detect=settings]")) await api.openHelperSettings();
+let iconHidden = false;
+let iconNoticeDismissed = false;
+let noticesHtml = "";
+
+function renderNotices() {
+  const box = $("notices");
+  const cards: string[] = [];
+  if (detect.supported && detect.enabled && detect.needsPermission) {
+    cards.push(`<div class="hb-perm hb-perm--attention" data-attention>
+      <span class="hb-perm__icon">${icon("alert-02")}</span>
+      <div class="hb-perm__body">
+        <div class="hb-perm__title">Detect cleaning needs access <span class="hb-pill hb-pill--attention">Action needed</span></div>
+        <p class="hb-perm__text">Switch on <b>Hushboard</b> in Privacy &amp; Security → Input Monitoring so it can notice a cloth across the keys. Only the timing is counted.</p>
+        <div class="hb-row">
+          <button class="hb-btn hb-btn--attention" type="button" data-notice="detect-settings">Open Input Monitoring</button>
+          <button class="hb-btn hb-btn--ghost" type="button" data-notice="detect-off">Turn off</button>
+        </div>
+      </div></div>`);
+  }
+  if (iconHidden && !iconNoticeDismissed) {
+    cards.push(`<div class="hb-perm hb-perm--attention" data-notice-card="icon">
+      <span class="hb-perm__icon">${icon("alert-02")}</span>
+      <div class="hb-perm__body">
+        <div class="hb-perm__title">Menu bar icon is hidden</div>
+        <p class="hb-perm__text">Your menu bar is full, so the Hushboard icon sits behind the camera notch. Make room by ${kbd(["⌘"])}-dragging other icons out of the menu bar, or open Hushboard from Spotlight anytime.</p>
+        <div class="hb-row"><button class="hb-btn hb-btn--secondary" type="button" data-notice="icon-ok">Got it</button></div>
+      </div></div>`);
+  }
+  const html = cards.join("");
+  if (html === noticesHtml) return;
+  noticesHtml = html;
+  box.innerHTML = html;
+  box.hidden = html === "";
+  renderStatus();
+}
+
+$("notices").addEventListener("click", async (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-notice]");
+  if (!b) return;
+  const action = b.dataset.notice;
+  if (action === "detect-settings") await api.openHelperSettings();
+  if (action === "detect-off") {
+    detect = await api.setAutoDetect(false).catch(() => detect);
+    renderDetect();
+  }
+  if (action === "icon-ok") {
+    iconNoticeDismissed = true;
+    renderNotices();
+  }
 });
+
+function attentionItems(): HTMLElement[] {
+  return Array.from(document.querySelectorAll<HTMLElement>(".app__body [data-attention], .app__body .hb-perm--blocked"));
+}
+
+function revealAttention() {
+  const first = attentionItems()[0];
+  if (!first) return;
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  first.scrollIntoView({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
+  first.removeAttribute("data-flash");
+  void first.offsetWidth;
+  first.setAttribute("data-flash", "");
+  window.setTimeout(() => first.removeAttribute("data-flash"), 1200);
+  first.querySelector<HTMLButtonElement>(".hb-btn--attention, .hb-btn--primary")?.focus({ preventScroll: true });
+}
+
+$("status").addEventListener("click", revealAttention);
 
 // ---------- Updates ----------
 function renderUpdate(update: UpdateInfo | null, message?: string) {
@@ -475,8 +545,8 @@ function permissionCards(p: Permissions): string {
 /** macOS keyboard helper: the hardware lock. */
 function helperCard(p: Permissions): string {
   const body = (pill: string, pillClass: string, text: string, actions: string, ok = false) =>
-    `<div class="hb-perm ${ok ? "hb-perm--granted" : ""}">
-      <span class="hb-perm__icon">${icon(ok ? "shield-check" : "keyboard")}</span>
+    `<div class="hb-perm ${ok ? "hb-perm--granted" : pillClass === "hb-pill--attention" ? "hb-perm--attention" : ""}" ${pillClass === "hb-pill--attention" ? "data-attention" : ""}>
+      <span class="hb-perm__icon">${icon(ok ? "shield-check" : pillClass === "hb-pill--attention" ? "alert-02" : "keyboard")}</span>
       <div class="hb-perm__body">
         <div class="hb-perm__title">Keyboard helper <span class="hb-pill ${pillClass}">${pill}</span></div>
         <p class="hb-perm__text">${text}</p>
@@ -488,18 +558,18 @@ function helperCard(p: Permissions): string {
       return body("Ready", "hb-pill--locked", "Locks the keyboard hardware, so no app can get in the way.", "", true);
     case "needs-approval":
       return body(
-        "Turn on",
-        "hb-pill--arming",
+        "Action needed",
+        "hb-pill--attention",
         "Switch on <b>Hushboard Keyboard Helper</b> in Input Monitoring. Hushboard notices on its own.",
-        `<button class="hb-btn hb-btn--primary" type="button" data-action="helper-settings">Open Input Monitoring</button>
+        `<button class="hb-btn hb-btn--attention" type="button" data-action="helper-settings">Open Input Monitoring</button>
          <button class="hb-btn hb-btn--ghost" type="button" data-action="helper-prompt">Ask again</button>`,
       );
     case "outdated":
       return body(
-        "Update",
-        "hb-pill--arming",
+        "Update needed",
+        "hb-pill--attention",
         "This helper is from an older Hushboard. Updating asks for your password.",
-        `<button class="hb-btn hb-btn--primary" type="button" data-action="install-helper">Update helper</button>`,
+        `<button class="hb-btn hb-btn--attention" type="button" data-action="install-helper">Update helper</button>`,
       );
     default:
       return body(
@@ -536,6 +606,7 @@ function renderPerms() {
   permsHtml = html;
   box.hidden = html === "";
   box.innerHTML = html;
+  renderStatus();
 }
 
 $("perms").addEventListener("click", async (e) => {
@@ -588,16 +659,28 @@ async function refreshPermissions() {
 
 // ---------- Status + footer ----------
 function renderStatus() {
-  const pill = $("status");
+  const pill = $<HTMLButtonElement>("status");
   const map: Record<LockState["phase"], [string, string]> = {
     idle: ["hb-pill", "Unlocked"],
     arming: ["hb-pill hb-pill--arming", `Locking in ${Math.ceil((state.armingMsLeft ?? 0) / 1000)} s`],
     locked: ["hb-pill hb-pill--locked", "Locked"],
   };
   let [cls, text] = map[state.phase];
-  if (state.phase === "idle" && perms && !perms.allGranted) [cls, text] = ["hb-pill hb-pill--error", "Setup needed"];
+  let actionable = false;
+  if (state.phase === "idle") {
+    const needs = attentionItems().length;
+    if (perms && !perms.allGranted) {
+      [cls, text] = ["hb-pill hb-pill--error", "Setup needed"];
+      actionable = needs > 0;
+    } else if (needs > 0) {
+      [cls, text] = ["hb-pill hb-pill--attention", needs === 1 ? "Action needed" : `${needs} actions needed`];
+      actionable = true;
+    }
+  }
   pill.className = cls;
   pill.textContent = text;
+  pill.disabled = !actionable;
+  pill.title = actionable ? "Show what needs attention" : "";
 }
 
 function renderError() {
@@ -781,14 +864,20 @@ async function boot() {
       document.documentElement.style.setProperty("--panel-room", `${Math.floor(height)}px`);
       window.dispatchEvent(new Event("hb-panel-room")); // re-fit (below) for the new room
     };
+    const applyIconHidden = (hidden: boolean) => {
+      iconHidden = hidden;
+      renderNotices();
+    };
     await api.onPanelCaret((caret) => applyCaret(caret ? caret.x : null));
     await api.onPanelRoom(applyRoom);
+    await api.onPanelIconHidden(applyIconHidden);
     // The panel may have been placed before this page was listening (it opens at launch):
     // ask, so the content lines up with the frosted shape and its pointer from the start.
     const layout = await api.panelLayout().catch(() => null);
     if (layout) {
       applyCaret(layout.caret);
       applyRoom(layout.room);
+      applyIconHidden(layout.iconHidden);
     }
     // Open and close animations (app.css). Re-adding the attribute restarts the open animation
     // even if the previous one hadn't finished.

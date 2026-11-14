@@ -737,7 +737,7 @@ pub fn run() {
                 }
                 shell::show_welcome(app.handle())?;
             } else if !at_login {
-                shell::show_panel(app.handle());
+                shell::show_panel_when_loaded(app.handle());
             }
             updates::spawn_checker(app.handle().clone());
             spawn_system_watcher(app.handle().clone());
@@ -773,6 +773,14 @@ pub fn run() {
             updates::get_autostart,
             updates::set_autostart
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Hushboard");
+        .build(tauri::generate_context!())
+        .expect("error while building Hushboard")
+        .run(|app, event| {
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = event {
+                shell::reopen(app);
+            }
+            #[cfg(not(target_os = "macos"))]
+            let _ = (app, event);
+        });
 }

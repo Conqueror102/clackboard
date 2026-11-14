@@ -40,6 +40,7 @@ const PANEL_CLOSE_MS: u64 = 150;
 /// Bumped on every open and close, so a pending hide knows whether it's been overtaken.
 static PANEL_GEN: AtomicU64 = AtomicU64::new(0);
 static PANEL_CLOSING: AtomicBool = AtomicBool::new(false);
+static SHOW_ON_LOAD: AtomicBool = AtomicBool::new(false);
 /// The panel height the page last asked for (logical px), so placing never reads a stale size.
 static PANEL_HEIGHT: Mutex<Option<f64>> = Mutex::new(None);
 
@@ -100,8 +101,7 @@ pub fn create_tray(app: &AppHandle) -> tauri::Result<()> {
                     .unwrap_or(1.0);
                 let p = rect.position.to_physical::<f64>(scale);
                 let s = rect.size.to_physical::<f64>(scale);
-                *TRAY_RECT.lock().unwrap() = Some((p.x, p.y, s.width, s.height));
-                toggle_panel(tray.app_handle());
+                toggle_panel(tray.app_handle(), (p.x, p.y, s.width, s.height));
             }
         })
         .build(app)?;
@@ -145,6 +145,11 @@ pub fn create_main_window(app: &AppHandle) -> tauri::Result<()> {
             .skip_taskbar(true)
             .always_on_top(true)
             .visible(false)
+            .on_page_load(|window, payload| {
+                if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) && SHOW_ON_LOAD.swap(false, Ordering::SeqCst) {
+                    show_panel(window.app_handle());
+                }
+            })
             .build()?;
         // A tray panel closes when you click anywhere else.
         let handle = app.clone();
@@ -168,24 +173,36 @@ pub fn create_main_window(app: &AppHandle) -> tauri::Result<()> {
 
 /// Where the tray icon is (physical px): from its last click, else asked from the system, which
 /// works before the first click too (e.g. the panel shown at launch).
-fn tray_rect(app: &AppHandle, scale: f64) -> Option<(f64, f64, f64, f64)> {
+fn tray_rect(app: &AppHandle, scale: f64) -> (Option<(f64, f64, f64, f64)>, bool) {
     if let Some(r) = *TRAY_RECT.lock().unwrap() {
-        return Some(r);
+        return (Some(r), false);
     }
-    let rect = app.tray_by_id(TRAY_ID)?.rect().ok().flatten()?;
+    let Some(rect) = app.tray_by_id(TRAY_ID).and_then(|t| t.rect().ok().flatten()) else {
+        return (None, false);
+    };
     let p = rect.position.to_physical::<f64>(scale);
     let s = rect.size.to_physical::<f64>(scale);
-    (s.width > 0.0).then_some((p.x, p.y, s.width, s.height))
+    if s.width <= 0.0 {
+        return (None, false);
+    }
+    let r = (p.x, p.y, s.width, s.height);
+    #[cfg(target_os = "macos")]
+    let hidden = mac::behind_notch(r);
+    #[cfg(not(target_os = "macos"))]
+    let hidden = false;
+    (Some(r), hidden)
 }
 
 /// Where the panel was last placed, for a page that loads (or reloads) after the
 /// `panel-caret` / `panel-room` events went out: it asks with `panel_layout` instead.
 #[derive(Clone, Copy, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PanelLayout {
     /// The pointer's x inside the window (logical px), or None when there's no pointer.
     caret: Option<f64>,
     /// The tallest the panel may be (logical px).
     room: f64,
+    icon_hidden: bool,
 }
 static PANEL_LAYOUT: Mutex<Option<PanelLayout>> = Mutex::new(None);
 
@@ -216,7 +233,7 @@ fn place_panel(app: &AppHandle, window: &WebviewWindow, logical_size: Option<(f6
     };
     let margin = 8.0 * scale;
 
-    let tray = tray_rect(app, scale);
+    let (tray, icon_hidden) = tray_rect(app, scale);
     let monitor = match tray {
         Some((x, y, _, _)) => app.monitor_from_point(x, y).ok().flatten(),
         None => None,
@@ -227,7 +244,8 @@ fn place_panel(app: &AppHandle, window: &WebviewWindow, logical_size: Option<(f6
     let (ax, ay) = (area.position.x as f64, area.position.y as f64);
     let (aw, ah) = (area.size.width as f64, area.size.height as f64);
 
-    let (x, y, caret) = match tray {
+    let anchor = if icon_hidden { None } else { tray };
+    let (x, y, caret) = match anchor {
         Some((tx, ty, tw, th)) => {
             let icon_x = tx + tw / 2.0;
             let x = (icon_x - pw / 2.0).clamp(ax + margin, ax + aw - pw - margin);
@@ -247,7 +265,8 @@ fn place_panel(app: &AppHandle, window: &WebviewWindow, logical_size: Option<(f6
     // Dock or taskbar) with a little air. The page caps the card at this and scrolls only beyond it.
     let room = (ah / scale - 8.0).max(200.0);
     let _ = app.emit_to("main", "panel-room", room);
-    *PANEL_LAYOUT.lock().unwrap() = Some(PanelLayout { caret, room });
+    let _ = app.emit_to("main", "panel-icon-hidden", icon_hidden);
+    *PANEL_LAYOUT.lock().unwrap() = Some(PanelLayout { caret, room, icon_hidden });
     // macOS: reshape the frosted background and shadow to the card and its pointer.
     #[cfg(target_os = "macos")]
     {
@@ -262,6 +281,29 @@ fn place_panel(app: &AppHandle, window: &WebviewWindow, logical_size: Option<(f6
 }
 
 pub fn show_panel(app: &AppHandle) {
+    *TRAY_RECT.lock().unwrap() = None;
+    open_panel(app);
+}
+
+pub fn show_panel_when_loaded(app: &AppHandle) {
+    if uses_panel() {
+        SHOW_ON_LOAD.store(true, Ordering::SeqCst);
+    } else {
+        show_panel(app);
+    }
+}
+
+pub fn reopen(app: &AppHandle) {
+    if let Some(welcome) = app.get_webview_window("welcome") {
+        let _ = welcome.show();
+        let _ = welcome.unminimize();
+        let _ = welcome.set_focus();
+        return;
+    }
+    show_panel(app);
+}
+
+fn open_panel(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         if uses_panel() {
             // Cancel a close that's still animating.
@@ -326,7 +368,7 @@ pub fn hide_panel(app: &AppHandle) {
 
 /// Clicking the tray icon while the panel is open (or still closing, because that click took
 /// focus from it) closes it; otherwise it opens.
-fn toggle_panel(app: &AppHandle) {
+fn toggle_panel(app: &AppHandle, rect: (f64, f64, f64, f64)) {
     let visible = app
         .get_webview_window("main")
         .and_then(|w| w.is_visible().ok())
@@ -334,7 +376,8 @@ fn toggle_panel(app: &AppHandle) {
     if visible {
         hide_panel(app);
     } else {
-        show_panel(app);
+        *TRAY_RECT.lock().unwrap() = Some(rect);
+        open_panel(app);
     }
 }
 
@@ -686,7 +729,7 @@ fn raise_above_menu_bar(app: &AppHandle, window: &WebviewWindow) {
 mod mac {
     use objc2::runtime::AnyObject;
     use objc2::{class, msg_send};
-    use objc2_foundation::NSEdgeInsets;
+    use objc2_foundation::{NSEdgeInsets, NSRect};
     use std::ffi::c_void;
 
     /// NSPopUpMenuWindowLevel: above the menu bar (NSMainMenuWindowLevel = 24).
@@ -836,6 +879,48 @@ mod mac {
             let animator: *mut AnyObject = msg_send![window, animator];
             let _: () = msg_send![animator, setAlphaValue: alpha];
             let _: () = msg_send![class!(NSAnimationContext), endGrouping];
+        }
+    }
+
+    pub fn behind_notch((x, y, w, h): (f64, f64, f64, f64)) -> bool {
+        unsafe {
+            let screens: *mut AnyObject = msg_send![class!(NSScreen), screens];
+            if screens.is_null() {
+                return false;
+            }
+            let count: usize = msg_send![screens, count];
+            if count == 0 {
+                return false;
+            }
+            let primary: *mut AnyObject = msg_send![screens, objectAtIndex: 0usize];
+            let primary_frame: NSRect = msg_send![primary, frame];
+            for i in 0..count {
+                let screen: *mut AnyObject = msg_send![screens, objectAtIndex: i];
+                let responds: bool = msg_send![screen, respondsToSelector: objc2::sel!(auxiliaryTopLeftArea)];
+                if !responds {
+                    continue;
+                }
+                let insets: NSEdgeInsets = msg_send![screen, safeAreaInsets];
+                if insets.top <= 0.0 {
+                    continue;
+                }
+                let scale: f64 = msg_send![screen, backingScaleFactor];
+                let (left, right, top, bottom) = (x / scale, (x + w) / scale, y / scale, (y + h) / scale);
+                let frame: NSRect = msg_send![screen, frame];
+                let screen_top = primary_frame.size.height - (frame.origin.y + frame.size.height);
+                let mid = (top + bottom) / 2.0;
+                if mid < screen_top || mid > screen_top + insets.top {
+                    continue;
+                }
+                let left_area: NSRect = msg_send![screen, auxiliaryTopLeftArea];
+                let right_area: NSRect = msg_send![screen, auxiliaryTopRightArea];
+                let gap_start = frame.origin.x + left_area.size.width;
+                let gap_end = frame.origin.x + frame.size.width - right_area.size.width;
+                if gap_end > gap_start && left < gap_end && right > gap_start {
+                    return true;
+                }
+            }
+            false
         }
     }
 

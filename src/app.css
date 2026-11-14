@@ -30,6 +30,16 @@ code { font-family: var(--font-mono); font-size: 0.92em; }
   --nc-gradient-1-color-1: var(--glass-danger-1);
   --nc-gradient-1-color-2: var(--glass-danger-2);
 }
+:is(.hb-perm--attention .hb-perm__icon, .app__setting-flag) {
+  --nc-gradient-1-color-1: var(--glass-attention-1);
+  --nc-gradient-1-color-2: var(--glass-attention-2);
+  --nc-gradient-2-color-1: color-mix(in srgb, var(--attention) 60%, transparent);
+  --nc-gradient-2-color-2: color-mix(in srgb, var(--attention) 28%, transparent);
+}
+.hb-perm--blocked .hb-perm__icon {
+  --nc-gradient-2-color-1: color-mix(in srgb, var(--glass-danger-1) 55%, transparent);
+  --nc-gradient-2-color-2: color-mix(in srgb, var(--glass-danger-1) 22%, transparent);
+}
 /* On a solid fill (the clay Lock button, the black island), the back shape takes the fill's
    text colour so the icon reads like the label next to it. */
 :is(.hb-btn--danger, .hb-hold[data-holding="true"], .hb-hold[data-done="true"]) {
@@ -40,6 +50,12 @@ code { font-family: var(--font-mono); font-size: 0.92em; }
 }
 /* On the clay Lock button a see-through front would melt into the clay, so the frost gets its
    own contrasting tint (light frost on the dark-theme clay, deep clay frost on the light one). */
+.hb-btn--attention {
+  --nc-gradient-1-color-1: var(--on-attention);
+  --nc-gradient-1-color-2: color-mix(in srgb, var(--on-attention) 80%, transparent);
+  --nc-gradient-2-color-1: color-mix(in srgb, var(--on-attention) 34%, transparent);
+  --nc-gradient-2-color-2: color-mix(in srgb, var(--on-attention) 14%, transparent);
+}
 .hb-btn--primary {
   --nc-gradient-1-color-1: var(--on-seal);
   --nc-gradient-1-color-2: color-mix(in srgb, var(--on-seal) 80%, transparent);
@@ -471,3 +487,49 @@ html[data-shell="panel"] .app__island-card { border: 0; border-radius: 9px; }
 .app__hint { grid-column: 1 / -1; margin: 0; font: 400 11px/15px var(--font-sans); color: var(--ink-muted); }
 .app__note-actions { display: block; margin-top: 6px; }
 html[data-shell="panel"] .app__hint { font: 400 11px/14px var(--font-ui); }
+
+button.hb-pill { margin: 0; cursor: default; }
+button.hb-pill:not([disabled]) { cursor: pointer; }
+button.hb-pill[disabled] { opacity: 1; }
+button.hb-pill:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+html[data-shell="panel"] :is(.hb-pill--attention, .hb-pill--error) { padding: 2px 8px 2px 7px; border-radius: 999px; font-weight: 600; }
+html[data-shell="panel"] .hb-pill--attention { color: var(--attention-ink); background: color-mix(in srgb, var(--attention) 22%, transparent); }
+html[data-shell="panel"] .hb-pill--error { background: color-mix(in srgb, var(--danger) 16%, transparent); }
+html[data-shell="panel"] button.hb-pill:not([disabled]):hover { filter: brightness(1.08); }
+.hb-pill--attention::before { animation: hb-breathe 1.8s ease-in-out infinite; }
+
+html[data-shell="panel"] .hb-perm--attention {
+  background: color-mix(in srgb, var(--attention) 16%, var(--surface-raised));
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--attention) 55%, transparent);
+}
+html[data-shell="panel"] .hb-perm--attention .hb-perm__icon { background: none; color: var(--attention-ink); }
+html[data-shell="panel"] .hb-perm--attention .hb-perm__title { color: var(--ink); }
+html[data-shell="panel"] .hb-perm--blocked { box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--danger) 50%, transparent); }
+html[data-shell="panel"] .hb-perm .hb-pill { padding: 1px 7px; border-radius: 999px; font: 600 10px/13px var(--font-ui); }
+html[data-shell="panel"] .hb-perm .hb-pill::before { display: none; }
+html[data-shell="panel"] .hb-perm .hb-pill--attention { background: var(--attention); color: var(--on-attention); }
+html[data-shell="panel"] .hb-perm .hb-pill--error { background: var(--danger); color: var(--on-danger); }
+html[data-shell="panel"] .hb-perm .hb-pill--locked { background: color-mix(in srgb, var(--seal) 18%, transparent); }
+html[data-shell="panel"] .hb-btn--attention { font-weight: 600; box-shadow: 0 1px 0 color-mix(in srgb, var(--on-attention) 25%, transparent); }
+html[data-shell="panel"] .hb-btn--attention:hover { background: color-mix(in srgb, var(--attention) 90%, #fff); }
+
+.app__setting-text { display: flex; flex-direction: column; min-width: 0; }
+.app__setting-flag { display: inline-flex; align-items: center; gap: 4px; font: 600 11px/14px var(--font-ui, var(--font-sans)); color: var(--attention-ink); }
+.app__setting-flag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--attention); flex: none; }
+.app__attn-slot:empty { display: none; }
+.app__attn-slot { margin-top: 3px; }
+
+@keyframes hb-attn-flash {
+  0%, 100% { box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--attention) 55%, transparent), 0 0 0 0 color-mix(in srgb, var(--attention) 0%, transparent); }
+  35% { box-shadow: inset 0 0 0 1px var(--attention), 0 0 0 4px color-mix(in srgb, var(--attention) 35%, transparent); }
+}
+@keyframes hb-danger-flash {
+  0%, 100% { box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--danger) 50%, transparent), 0 0 0 0 transparent; }
+  35% { box-shadow: inset 0 0 0 1px var(--danger), 0 0 0 4px color-mix(in srgb, var(--danger) 30%, transparent); }
+}
+.hb-perm--attention[data-flash] { animation: hb-attn-flash 520ms ease-out 2; }
+.hb-perm--blocked[data-flash] { animation: hb-danger-flash 520ms ease-out 2; }
+@media (prefers-reduced-motion: reduce) {
+  .hb-pill--attention::before { animation: none; }
+  .hb-perm[data-flash] { animation: none; }
+}

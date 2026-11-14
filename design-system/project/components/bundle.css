@@ -23,6 +23,8 @@ body { margin: 0; background: var(--surface); color: var(--ink); font-family: va
 .hb-btn--secondary { background: var(--surface-raised); color: var(--ink); border-color: var(--line-strong); }
 .hb-btn--secondary:hover { background: var(--surface-sunken); }
 .hb-btn--danger { background: var(--danger); color: var(--on-danger); }
+.hb-btn--attention { background: var(--attention); color: var(--on-attention); }
+.hb-btn--attention:hover { background: color-mix(in srgb, var(--attention) 88%, var(--on-attention)); }
 .hb-btn--ghost { background: transparent; color: var(--ink-muted); }
 .hb-btn--ghost:hover { color: var(--ink); background: var(--surface-sunken); }
 .hb-btn--lg { min-height: 52px; padding: 0 var(--space-6); border-radius: var(--radius-lg); font-size: 17px; }
@@ -60,6 +62,8 @@ body { margin: 0; background: var(--surface); color: var(--ink); font-family: va
 .hb-pill--arming::before { background: var(--caution); }
 .hb-pill--error { color: var(--danger); border-color: var(--danger); }
 .hb-pill--error::before { background: var(--danger); border-radius: var(--radius-sm); }
+.hb-pill--attention { color: var(--attention-ink); border-color: var(--attention); background: color-mix(in srgb, var(--attention) 16%, var(--surface-raised)); }
+.hb-pill--attention::before { background: var(--attention); }
 
 /* ---------- DurationPicker (segmented) ---------- */
 .hb-field { display: flex; flex-direction: column; gap: var(--space-2); }
@@ -148,6 +152,8 @@ body { margin: 0; background: var(--surface); color: var(--ink); font-family: va
 .hb-perm--blocked { border-color: var(--danger); }
 .hb-perm--blocked .hb-perm__icon { color: var(--danger); }
 .hb-perm--granted .hb-perm__icon { background: var(--suds); color: var(--on-suds); }
+.hb-perm--attention { border-color: var(--attention); background: color-mix(in srgb, var(--attention) 14%, var(--surface-raised)); }
+.hb-perm--attention .hb-perm__icon { background: color-mix(in srgb, var(--attention) 30%, var(--surface-raised)); color: var(--attention-ink); }
 
 /* ---------- LockOverlay ---------- */
 .hb-overlay {

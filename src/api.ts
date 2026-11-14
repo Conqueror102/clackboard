@@ -280,8 +280,11 @@ export const api = {
 
   /** Tray panel: where it was last placed (pointer x or null, and room), or null before the first
    *  placement. The page asks on load, since the placement events may have gone out before it listened. */
-  panelLayout: (): Promise<{ caret: number | null; room: number } | null> =>
+  panelLayout: (): Promise<{ caret: number | null; room: number; iconHidden: boolean } | null> =>
     inTauri ? call("panel_layout") : Promise.resolve(null),
+
+  onPanelIconHidden: async (cb: (hidden: boolean) => void): Promise<() => void> =>
+    inTauri ? on<boolean>("panel-icon-hidden", cb) : () => {},
 
   /** Tray panel: the most height the screen has room for (logical px), sent each time it's placed. */
   onPanelRoom: async (cb: (height: number) => void): Promise<() => void> =>

@@ -8,12 +8,13 @@
   <body>
     <div class="app" id="app">
       <header class="app__header">
-        <div class="app__brand" id="brand"><span class="title">Hushboard</span></div>        <span class="hb-pill" id="status" aria-live="polite">Unlocked</span>
+        <div class="app__brand" id="brand"><span class="title">Hushboard</span></div>        <button class="hb-pill" type="button" id="status" aria-live="polite" disabled>Unlocked</button>
       </header>
 
       <main class="app__body">
         <section class="hb-perm hb-perm--granted app__update" id="update" aria-live="polite" hidden></section>
         <section class="hb-stack" id="perms" hidden></section>
+        <section class="hb-stack" id="notices" hidden></section>
         <div class="app__error" id="error" role="alert" hidden></div>
 
         <section class="app__section" aria-labelledby="dur-label">
