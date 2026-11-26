@@ -23,16 +23,15 @@ Real copy to reuse:
 | Status | Unlocked · Locking in 3 s · Locked · Setup needed |
 | Sections | Unlock after · Keyboards · Options |
 | Settings | Cover the screen · Show the keys you press · Launch sound · Open at login |
-| Overlay headline | Wipe away |
-| Overlay line | Key presses are being ignored. Your mouse and trackpad still work. |
-| Unlock hint | Hold for 1.5 seconds with the mouse or trackpad |
+| Overlay status | Keyboard locked |
+| Overlay hint | or press ⌃⌥U |
 | After unlock | Keyboard unlocked |
 | Lock failed | Couldn't lock the keyboard. Hushboard needs Accessibility access. |
 | Helper off | Switch on Hushboard Keyboard Helper in Input Monitoring. Hushboard notices on its own. |
 
 ## Visual foundations
 
-**Two registers.** The everyday surfaces (the menu bar or tray panel, and the Linux window) are *native*: they borrow the system's materials, font and control sizes so Hushboard sits quietly beside the system's own menu bar extras, like Karabiner-Elements or Blip. On macOS the panel is the system's frosted popover material with the native window shadow, and its colours switch to the translucent `material-*` tokens so the frost shows through. The moments you look at while cleaning (the island, the lock overlay, the countdown) are *branded*: solid surfaces, the display face and the clay, readable at arm's length.
+**Two registers.** The everyday surfaces (the menu bar or tray panel, and the Linux window) are *native*: they borrow the system's materials, font and control sizes so Hushboard sits quietly beside the system's own menu bar extras, like Karabiner-Elements or Blip. On macOS the panel is the system's frosted popover material with the native window shadow, and its colours switch to the translucent `material-*` tokens so the frost shows through. The moments you look at while cleaning (the island, the lock overlay, the countdown) are *branded*: solid surfaces and the clay, readable at arm's length. The lock overlay stays the plainest of them: the `ui` face, no card, clay only where something is locked or counting.
 
 **Native panel rules.** The `ui` family (the system font: SF Pro, Segoe UI, Ubuntu…) at 13 px; section labels at 11 px, semibold, sentence case; one rounded group per section with hairlines between rows; small switches and a 22 px segmented control; one 30 px primary button. Colour only marks state: clay on switches that are on, the Lock button and the locked status; `caution` and `danger` on the words that need them. No tinted rows, no icon tiles.
 

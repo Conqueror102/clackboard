@@ -1,8 +1,10 @@
 # LockOverlay
 
-The full-screen view shown while the keyboard is locked; it composes StatusPill, Countdown, Keycap and HoldButton on a `suds` wash.
+The full-screen view shown while the keyboard is locked. No card: one quiet column in the middle of a plain `surface`, and the way out pinned to the bottom.
 
-**Order, top to bottom (fixed):** StatusPill "Keyboard locked" → `title-lg` headline → one line of `body` in `ink-muted` saying what still works → Countdown (omit when duration is Never) → strip of up to 6 recent Keycaps (only if "Show keys I press while locked" is on) → HoldButton with its hint → escape shortcut line.
+**Order, top to bottom (fixed):** a small status line "Keyboard locked" with a clay dot → the time left in the `ui` face at weight 200 with a 2 px clay hairline under it (when duration is Never, "Unlock when you're done" instead) → up to 6 recent keys as plain characters, no chips, the newest at full strength and older ones fading out (only if "Show the keys you press" is on) → at the bottom, HoldButton as a soft filled pill with no border, and one hint line with the escape shortcut as plain glyphs.
+
+**Colour:** clay only on the status dot, the progress line, the newest key for a moment and the hold fill. The time and the line turn `caution` in the last 10 s.
 
 **Rules:**
 - The overlay covers every display, on top of all windows, but it is NOT a security lock screen. No password; the pointer stays live.
@@ -11,4 +13,4 @@ The full-screen view shown while the keyboard is locked; it composes StatusPill,
 - Fade in and out over `motion-slow`; no other motion.
 - On unlock, show a 2 s toast "Keyboard unlocked" in the main window, then close the overlay.
 
-**Headline copy:** "Wipe away" (default). Alternatives: "Keyboard locked", "Go ahead, clean". Never jokes about danger or data.
+**Copy:** no headline. The status line says "Keyboard locked"; the hint says "or press" followed by the shortcut. Never jokes about danger or data.

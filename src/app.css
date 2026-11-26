@@ -22,7 +22,7 @@ code { font-family: var(--font-mono); font-size: 0.92em; }
 }
 .hb-glass { flex: none; overflow: visible; }
 :is(.app__brand, .hb-perm--granted .hb-perm__icon, .hb-pill--locked,
-    .island__seal, .island__ring-icon, .hb-overlay__forever, .hb-key--swallowed) {
+    .island__seal, .island__ring-icon, .hb-key--swallowed) {
   --nc-gradient-1-color-1: var(--glass-clay-1);
   --nc-gradient-1-color-2: var(--glass-clay-2);
 }
@@ -118,16 +118,9 @@ code { font-family: var(--font-mono); font-size: 0.92em; }
 
 .hb-perm .hb-btn { min-height: 34px; padding: 0 var(--space-3); font-size: 13px; }
 
-/* ---------- Overlay window ---------- */
-.overlay-root { height: 100%; }
-.overlay-root .hb-overlay { height: 100%; }
-.hb-overlay__card .hb-keys { min-height: 46px; justify-content: center; }
-.hb-overlay__lead { display: flex; align-items: center; justify-content: center; gap: var(--space-2); color: var(--ink-muted); }
-.hb-overlay__lead svg { width: 20px; height: 20px; }
-.hb-overlay__forever { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); color: var(--on-suds); }
-.hb-overlay__forever svg { width: 40px; height: 40px; }
 .hb-key { animation: none; }
 .hb-key--fresh { animation: hb-key-in var(--motion-slow) ease-out; }
+.hb-overlay__keys .hb-key--fresh { animation: hb-fade-in var(--motion-fast) ease-out; }
 @keyframes hb-key-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(2px); } }
 
 @media (prefers-reduced-motion: reduce) {
@@ -436,12 +429,12 @@ html[data-platform="linux"] .island__title { font-size: 22px; line-height: 28px;
 .island[data-state="arming"] .island__arming,
 .island[data-state="locked"] .island__locked,
 .island[data-state="done"] .island__done { animation: hb-island-in 340ms var(--ease-out) both; }
-.hb-overlay__card { animation: hb-rise 420ms var(--ease-out) both; }
+.hb-overlay { animation: hb-fade-in var(--motion-slow) ease-out both; }
 
 @media (prefers-reduced-motion: reduce) {
   .hb-pill--locked::before, .hb-pill--arming::before { animation: none; }
   .app__footer[data-swap] > *, .app__body :is(.hb-perm, .app__error), .app__toast:not([hidden]),
-  .island[data-state] > *, .hb-overlay__card { animation: none; }
+  .island[data-state] > *, .hb-overlay { animation: none; }
   .hb-switch::after { transition: none; }
 }
 

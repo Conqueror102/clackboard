@@ -157,18 +157,57 @@ body { margin: 0; background: var(--surface); color: var(--ink); font-family: va
 
 /* ---------- LockOverlay ---------- */
 .hb-overlay {
-  min-height: 100%; box-sizing: border-box; display: grid; place-items: center; padding: var(--space-12) var(--space-4);
-  background: var(--suds);
+  height: 100%; min-height: 100vh; min-height: 100dvh; box-sizing: border-box;
+  display: grid; grid-template-rows: 1fr auto; justify-items: center;
+  padding: var(--space-12) var(--space-6);
+  background: var(--surface); color: var(--ink); font-family: var(--font-ui); text-align: center;
 }
-.hb-overlay__card {
-  display: flex; flex-direction: column; align-items: center; gap: var(--space-6); text-align: center;
-  width: min(440px, 100%); padding: var(--space-8) var(--space-6); box-sizing: border-box;
-  background: var(--surface-raised); border-radius: var(--radius-lg); box-shadow: var(--raised);
+.hb-overlay__center { align-self: center; display: flex; flex-direction: column; align-items: center; }
+.hb-overlay__status {
+  display: inline-flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-4);
+  font: 500 13px/18px var(--font-ui); letter-spacing: 0.01em; color: var(--ink-muted);
 }
-.hb-overlay__title { font: 750 32px/36px var(--font-display); letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
-.hb-overlay__text { margin: 0; color: var(--ink-muted); max-width: 34ch; }
-.hb-overlay__escape { font: 400 12px/16px var(--font-sans); color: var(--ink-muted); display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: center; }
+.hb-overlay__status::before { content: ""; width: 6px; height: 6px; border-radius: var(--radius-pill); background: var(--seal); }
+.hb-overlay__timer { display: flex; flex-direction: column; align-items: center; gap: var(--space-8); }
+.hb-overlay__time {
+  font: 200 clamp(96px, 13vw, 176px)/0.86 var(--font-ui); letter-spacing: -0.055em;
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.hb-overlay__bar { position: relative; display: block; width: 200px; height: 2px; border-radius: var(--radius-pill); background: var(--line); overflow: hidden; }
+.hb-overlay__bar > span {
+  position: absolute; inset: 0; border-radius: inherit; background: var(--seal);
+  transform-origin: left center; transition: transform 1s linear;
+}
+.hb-overlay__timer--caution .hb-overlay__time { color: var(--caution); }
+.hb-overlay__timer--caution .hb-overlay__bar > span { background: var(--caution); }
+.hb-overlay__forever { margin: var(--space-2) 0 0; font: 300 clamp(40px, 4.4vw, 56px)/1.1 var(--font-ui); letter-spacing: -0.035em; color: var(--ink); }
+.hb-overlay__keys { justify-content: center; align-items: baseline; gap: var(--space-4); min-height: 20px; margin-top: var(--space-12); }
+.hb-overlay__keys .hb-key {
+  display: inline; min-width: 0; height: auto; padding: 0; border: 0; border-radius: 0;
+  background: none; box-shadow: none; transform: none;
+  font: 500 15px/20px var(--font-ui); color: var(--ink-muted);
+  transition: opacity var(--motion-slow), color var(--motion-slow);
+}
+.hb-overlay__keys .hb-key:nth-last-child(2) { opacity: 0.72; }
+.hb-overlay__keys .hb-key:nth-last-child(3) { opacity: 0.52; }
+.hb-overlay__keys .hb-key:nth-last-child(4) { opacity: 0.36; }
+.hb-overlay__keys .hb-key:nth-last-child(5) { opacity: 0.24; }
+.hb-overlay__keys .hb-key:nth-last-child(n + 6) { opacity: 0.16; }
+.hb-overlay__keys .hb-key--fresh { color: var(--seal); }
+.hb-overlay__exit { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
+.hb-overlay__hold {
+  min-height: 44px; min-width: 200px; padding: 0 var(--space-6); border: 0; border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--ink) 7%, var(--surface)); color: var(--ink);
+  font: 500 15px/20px var(--font-ui); transition: background var(--motion-fast);
+}
+.hb-overlay__hold:hover { background: color-mix(in srgb, var(--ink) 11%, var(--surface)); }
+.hb-overlay__hint {
+  display: flex; align-items: center; justify-content: center; gap: var(--space-2); margin: 0;
+  font: 400 13px/18px var(--font-ui); color: var(--ink-muted);
+}
+.hb-overlay__hint .hb-kbd { gap: 3px; }
+.hb-overlay__hint .hb-kbd kbd { padding: 0; border: 0; border-radius: 0; background: none; font: 500 13px/18px var(--font-ui); color: var(--ink-muted); }
 
 @media (prefers-reduced-motion: reduce) {
-  .hb-btn, .hb-seg button, .hb-key, .hb-switch, .hb-switch::after { transition: none; }
+  .hb-btn, .hb-seg button, .hb-key, .hb-switch, .hb-switch::after, .hb-overlay__bar > span, .hb-overlay__hold { transition: none; }
 }
