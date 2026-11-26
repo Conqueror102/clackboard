@@ -14,12 +14,15 @@
 //!   back), so the user never has to restart anything.
 //! * Installed once with the user's admin password (`--keyhelper-install`).
 //! * Listens on a Unix socket. Only root and the user logged in at the console may connect.
-//! * Speaks newline-delimited JSON. Requests: `status`, `lock {devices}`, `unlock`.
-//!   Messages back: replies with `ok`, then events `key {label}`, `escape`, `released {reason}`.
+//! * Speaks newline-delimited JSON. Requests: `status`, `lock {devices}`, `unlock`, `watch`.
+//!   Messages back: replies with `ok`, then events `key {label}`, `escape`, `released {reason}`,
+//!   and `cleaning` on a watching connection. Watching only ever reports that a cloth-like burst
+//!   happened, never which keys were pressed.
 //! * Safety: a lock lives only as long as the connection that made it (an app crash releases
 //!   it), Ctrl + Alt + U releases it inside the helper, and no lock outlasts `MAX_LOCK`.
 
-use crate::mac_hid::{self, HidLock};
+use crate::detect::{Detector, Edge};
+use crate::mac_hid::{self, HidLock, HidWatch};
 use crate::{Error, Event, Keyboard, Kind};
 use serde_json::{json, Value};
 use std::io::{BufRead, BufReader, Write};
@@ -45,7 +48,8 @@ const EMBEDDED: &str = "Helpers/Hushboard Keyboard Helper.app";
 /// 4: user-side access check, `restart` command, refuses to lock without Input Monitoring.
 /// 5: bundle built and signed by the app (stable "Hushboard Dev" identity when available).
 /// 6: Developer ID signed helper shipped inside release builds.
-pub const VERSION: u64 = 6;
+/// 7: `watch` detects cleaning from the keyboards themselves.
+pub const VERSION: u64 = 7;
 const MAX_LOCK: Duration = Duration::from_secs(30 * 60);
 
 /// One lock at a time across all connections.
@@ -395,6 +399,7 @@ fn serve(stream: UnixStream) -> std::io::Result<()> {
         return Ok(());
     }
     let slot: Slot = Arc::new(Mutex::new(None));
+    let mut watching: Option<HidWatch> = None;
     let reader = BufReader::new(stream);
 
     for line in reader.lines() {
@@ -480,6 +485,37 @@ fn serve(stream: UnixStream) -> std::io::Result<()> {
                     }
                 }
             }
+            "watch" => {
+                if watching.is_some() {
+                    send(&writer, json!({ "ok": true, "event": "watching" }));
+                    continue;
+                }
+                if mac_hid::access() != "granted" {
+                    send(&writer, json!({
+                        "ok": false,
+                        "code": "permission",
+                        "error": "the keyboard helper isn't allowed in Input Monitoring yet"
+                    }));
+                    continue;
+                }
+                let w = writer.clone();
+                let detector = Mutex::new(Detector::default());
+                let sink = Arc::new(move |edge: Edge| {
+                    if detector.lock().unwrap().push(std::time::Instant::now(), edge) {
+                        send(&w, json!({ "event": "cleaning" }));
+                    }
+                });
+                match mac_hid::watch(sink) {
+                    Ok(watch) => {
+                        watching = Some(watch);
+                        send(&writer, json!({ "ok": true, "event": "watching" }));
+                    }
+                    Err(e) => {
+                        let code = if matches!(e, Error::PermissionDenied(_)) { "permission" } else { "error" };
+                        send(&writer, json!({ "ok": false, "code": code, "error": e.to_string() }));
+                    }
+                }
+            }
             "unlock" => {
                 let had = slot.lock().unwrap().take().is_some();
                 send(&writer, json!({ "ok": true, "event": if had { "released" } else { "idle" } }));
@@ -489,6 +525,7 @@ fn serve(stream: UnixStream) -> std::io::Result<()> {
     }
     // Connection closed (app quit or crashed): release.
     slot.lock().unwrap().take();
+    drop(watching);
     Ok(())
 }
 
@@ -700,6 +737,71 @@ pub fn lock(device_ids: &[String], sink: crate::Sink) -> Result<HelperLock, Erro
         })
         .map_err(|e| Error::Os(e.to_string()))?;
     Ok(HelperLock { stream: Some(stream), reader: Some(reader) })
+}
+
+pub struct HelperWatch {
+    stream: Option<UnixStream>,
+    reader: Option<std::thread::JoinHandle<()>>,
+    alive: Arc<AtomicBool>,
+}
+
+impl HelperWatch {
+    pub fn alive(&self) -> bool {
+        self.alive.load(Ordering::SeqCst)
+    }
+
+    pub fn release(&mut self) {
+        self.alive.store(false, Ordering::SeqCst);
+        if let Some(s) = self.stream.take() {
+            let _ = s.shutdown(std::net::Shutdown::Both);
+        }
+        if let Some(t) = self.reader.take() {
+            if t.thread().id() != std::thread::current().id() {
+                let _ = t.join();
+            }
+        }
+    }
+}
+
+impl Drop for HelperWatch {
+    fn drop(&mut self) {
+        self.release();
+    }
+}
+
+pub fn watch(on_cleaning: crate::CleaningSink) -> Result<HelperWatch, Error> {
+    let stream = connect_installed().ok_or_else(|| Error::Os("the keyboard helper isn't running".into()))?;
+    watch_on(stream, on_cleaning)
+}
+
+fn watch_on(mut stream: UnixStream, on_cleaning: crate::CleaningSink) -> Result<HelperWatch, Error> {
+    writeln!(stream, "{}", json!({ "cmd": "watch" })).map_err(|e| Error::Os(format!("keyboard helper: {e}")))?;
+    let mut lines = BufReader::new(stream.try_clone().map_err(|e| Error::Os(e.to_string()))?);
+    let mut first = String::new();
+    lines.read_line(&mut first).map_err(|e| Error::Os(format!("keyboard helper didn't answer: {e}")))?;
+    let reply: Value =
+        serde_json::from_str(&first).map_err(|_| Error::Os("keyboard helper sent a bad reply".into()))?;
+    if reply["ok"].as_bool() != Some(true) {
+        let msg = reply["error"].as_str().unwrap_or("the keyboard helper refused").to_string();
+        return Err(if reply["code"] == "permission" { Error::PermissionDenied(msg) } else { Error::Os(msg) });
+    }
+    let alive = Arc::new(AtomicBool::new(true));
+    let alive_reader = alive.clone();
+    let reader = std::thread::Builder::new()
+        .name("keylock-helper-watch".into())
+        .spawn(move || {
+            let _ = lines.get_ref().set_read_timeout(None);
+            for line in lines.lines() {
+                let Ok(line) = line else { break };
+                let Ok(msg) = serde_json::from_str::<Value>(&line) else { continue };
+                if msg["event"] == "cleaning" {
+                    on_cleaning();
+                }
+            }
+            alive_reader.store(false, Ordering::SeqCst);
+        })
+        .map_err(|e| Error::Os(e.to_string()))?;
+    Ok(HelperWatch { stream: Some(stream), reader: Some(reader), alive })
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -914,6 +1016,52 @@ mod tests {
         let mode = std::fs::metadata(dst.join("Contents/MacOS/hushboard-keyhelper")).unwrap().permissions().mode();
         assert_eq!(mode & 0o111, 0o111);
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    fn fake_helper(replies: &'static [&'static str]) -> (UnixStream, std::thread::JoinHandle<String>) {
+        let (app, helper) = UnixStream::pair().unwrap();
+        let t = std::thread::spawn(move || {
+            let mut request = String::new();
+            BufReader::new(helper.try_clone().unwrap()).read_line(&mut request).unwrap();
+            let mut w = helper;
+            for line in replies {
+                writeln!(w, "{line}").unwrap();
+            }
+            request
+        });
+        (app, t)
+    }
+
+    #[test]
+    fn a_watch_reports_cleaning_and_notices_the_helper_going_away() {
+        let (app, helper) = fake_helper(&[r#"{"ok":true,"event":"watching"}"#, r#"{"event":"cleaning"}"#]);
+        let (tx, rx) = std::sync::mpsc::channel();
+        let watch = watch_on(app, Arc::new(move || tx.send(()).unwrap())).unwrap();
+        assert!(helper.join().unwrap().contains(r#""cmd":"watch""#));
+        rx.recv_timeout(Duration::from_secs(2)).expect("cleaning reported");
+        for _ in 0..50 {
+            if !watch.alive() {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        assert!(!watch.alive());
+    }
+
+    #[test]
+    fn a_helper_without_input_monitoring_refuses_to_watch() {
+        let (app, helper) = fake_helper(&[r#"{"ok":false,"code":"permission","error":"not allowed"}"#]);
+        let result = watch_on(app, Arc::new(|| {}));
+        helper.join().unwrap();
+        assert!(matches!(result, Err(Error::PermissionDenied(_))));
+    }
+
+    #[test]
+    fn an_older_helper_without_watch_is_an_error() {
+        let (app, helper) = fake_helper(&[r#"{"ok":false,"error":"unknown command"}"#]);
+        let result = watch_on(app, Arc::new(|| {}));
+        helper.join().unwrap();
+        assert!(matches!(result, Err(Error::Os(_))));
     }
 
     #[test]

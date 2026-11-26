@@ -3,6 +3,7 @@
 //! the event system. Needs root and Input Monitoring, so it runs inside the keyboard helper
 //! (see `mac_helper.rs`), never in the app itself.
 
+use crate::detect::Edge;
 use crate::{Error, Event, Keyboard, Kind, Modifiers, Sink};
 use core_foundation::base::{CFType, CFTypeRef, TCFType};
 use core_foundation::boolean::CFBoolean;
@@ -34,6 +35,11 @@ extern "C" {
     fn IOHIDManagerCreate(alloc: *const c_void, options: u32) -> IOHIDManagerRef;
     fn IOHIDManagerSetDeviceMatching(manager: IOHIDManagerRef, matching: *const c_void);
     fn IOHIDManagerCopyDevices(manager: IOHIDManagerRef) -> *const c_void;
+    fn IOHIDManagerOpen(manager: IOHIDManagerRef, options: u32) -> IOReturn;
+    fn IOHIDManagerClose(manager: IOHIDManagerRef, options: u32) -> IOReturn;
+    fn IOHIDManagerRegisterInputValueCallback(manager: IOHIDManagerRef, callback: Option<ValueCallback>, context: *mut c_void);
+    fn IOHIDManagerScheduleWithRunLoop(manager: IOHIDManagerRef, run_loop: CFRunLoopRef, mode: CFStringRef);
+    fn IOHIDManagerUnscheduleFromRunLoop(manager: IOHIDManagerRef, run_loop: CFRunLoopRef, mode: CFStringRef);
     fn IOHIDDeviceGetProperty(device: IOHIDDeviceRef, key: CFStringRef) -> CFTypeRef;
     fn IOHIDDeviceOpen(device: IOHIDDeviceRef, options: u32) -> IOReturn;
     fn IOHIDDeviceClose(device: IOHIDDeviceRef, options: u32) -> IOReturn;
@@ -78,18 +84,25 @@ struct DeviceSet {
     devices: Vec<IOHIDDeviceRef>,
 }
 
+fn keyboard_manager() -> Option<IOHIDManagerRef> {
+    unsafe {
+        let manager = IOHIDManagerCreate(std::ptr::null(), 0);
+        if manager.is_null() {
+            return None;
+        }
+        let matching = CFDictionary::from_CFType_pairs(&[
+            (CFString::new("DeviceUsagePage").as_CFType(), CFNumber::from(1i32).as_CFType()),
+            (CFString::new("DeviceUsage").as_CFType(), CFNumber::from(6i32).as_CFType()),
+        ]);
+        IOHIDManagerSetDeviceMatching(manager, matching.as_concrete_TypeRef() as *const c_void);
+        Some(manager)
+    }
+}
+
 impl DeviceSet {
     fn keyboards() -> Option<Self> {
         unsafe {
-            let manager = IOHIDManagerCreate(std::ptr::null(), 0);
-            if manager.is_null() {
-                return None;
-            }
-            let matching = CFDictionary::from_CFType_pairs(&[
-                (CFString::new("DeviceUsagePage").as_CFType(), CFNumber::from(1i32).as_CFType()),
-                (CFString::new("DeviceUsage").as_CFType(), CFNumber::from(6i32).as_CFType()),
-            ]);
-            IOHIDManagerSetDeviceMatching(manager, matching.as_concrete_TypeRef() as *const c_void);
+            let manager = keyboard_manager()?;
             let set = IOHIDManagerCopyDevices(manager);
             let mut devices = Vec::new();
             if !set.is_null() {
@@ -306,6 +319,96 @@ pub fn seize(ids: &[String], sink: Sink) -> Result<HidLock, Error> {
         Err(_) => {
             stop.store(true, Ordering::SeqCst);
             Err(Error::Os("taking over the keyboard timed out".into()))
+        }
+    }
+}
+
+type EdgeSink = Arc<dyn Fn(Edge) + Send + Sync + 'static>;
+
+struct WatchState {
+    sink: EdgeSink,
+}
+
+unsafe extern "C" fn on_watch_value(context: *mut c_void, _r: IOReturn, _sender: *mut c_void, value: IOHIDValueRef) {
+    let state = &*(context as *const WatchState);
+    let element = IOHIDValueGetElement(value);
+    if element.is_null() || IOHIDElementGetUsagePage(element) != 0x07 {
+        return;
+    }
+    let usage = IOHIDElementGetUsage(element);
+    let pressed = IOHIDValueGetIntegerValue(value) != 0;
+    match usage {
+        0x01 if pressed => (state.sink)(Edge::Overflow),
+        0x04..=0xDF => (state.sink)(if pressed { Edge::Down(usage) } else { Edge::Up(usage) }),
+        _ => {}
+    }
+}
+
+pub struct HidWatch {
+    stop: Arc<AtomicBool>,
+    thread: Option<JoinHandle<()>>,
+}
+
+impl HidWatch {
+    pub fn release(&mut self) {
+        self.stop.store(true, Ordering::SeqCst);
+        if let Some(t) = self.thread.take() {
+            if t.thread().id() != std::thread::current().id() {
+                let _ = t.join();
+            }
+        }
+    }
+}
+
+impl Drop for HidWatch {
+    fn drop(&mut self) {
+        self.release();
+    }
+}
+
+pub fn watch(sink: EdgeSink) -> Result<HidWatch, Error> {
+    let stop = Arc::new(AtomicBool::new(false));
+    let stop_thread = stop.clone();
+    let (ready_tx, ready_rx) = mpsc::channel::<Result<(), Error>>();
+
+    let thread = std::thread::Builder::new()
+        .name("keylock-hid-watch".into())
+        .spawn(move || unsafe {
+            let Some(manager) = keyboard_manager() else {
+                let _ = ready_tx.send(Err(Error::Os("IOKit is unavailable".into())));
+                return;
+            };
+            let state = Box::into_raw(Box::new(WatchState { sink }));
+            let run_loop = CFRunLoop::get_current();
+            IOHIDManagerRegisterInputValueCallback(manager, Some(on_watch_value), state as *mut c_void);
+            IOHIDManagerScheduleWithRunLoop(manager, run_loop.as_concrete_TypeRef(), kCFRunLoopDefaultMode);
+            let code = IOHIDManagerOpen(manager, 0);
+            if code == 0 {
+                let _ = ready_tx.send(Ok(()));
+                while !stop_thread.load(Ordering::SeqCst) {
+                    CFRunLoop::run_in_mode(kCFRunLoopDefaultMode, Duration::from_millis(200), false);
+                }
+                IOHIDManagerClose(manager, 0);
+            }
+            IOHIDManagerUnscheduleFromRunLoop(manager, run_loop.as_concrete_TypeRef(), kCFRunLoopDefaultMode);
+            IOHIDManagerRegisterInputValueCallback(manager, None, std::ptr::null_mut());
+            CFRelease(manager as *const c_void);
+            drop(Box::from_raw(state));
+            if code != 0 {
+                let _ = ready_tx.send(Err(open_error(code, "the keyboards")));
+            }
+        })
+        .map_err(|e| Error::Os(e.to_string()))?;
+
+    match ready_rx.recv_timeout(Duration::from_secs(5)) {
+        Ok(Ok(())) => Ok(HidWatch { stop, thread: Some(thread) }),
+        Ok(Err(e)) => {
+            let _ = thread.join();
+            Err(e)
+        }
+        Err(_) => {
+            stop.store(true, Ordering::SeqCst);
+            Err(Error::Os("watching the keyboards timed out".into()))
         }
     }
 }

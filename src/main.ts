@@ -372,7 +372,7 @@ function renderDetect() {
   } else if (blocked) {
     note.textContent = "";
   } else if (detect.enabled) {
-    note.textContent = `On. Locks for ${length} when many keys are pressed at once. Only the timing is counted, never which keys.`;
+    note.textContent = `Wiping the keys locks them for ${length}. Hushboard never records what you type.`;
   } else {
     note.textContent = "Locks on its own when many keys are pressed at once, like a cloth wiping across them.";
   }

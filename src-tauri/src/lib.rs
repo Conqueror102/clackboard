@@ -5,7 +5,6 @@
 //! Phases: Idle → Arming (arm delay, cancellable) → Locked (until the timer, the hold-to-unlock
 //! button or Ctrl + Alt + U) → Idle.
 
-mod cleaning;
 mod shell;
 mod updates;
 
@@ -369,6 +368,7 @@ fn spawn_system_watcher(app: AppHandle) {
     std::thread::Builder::new()
         .name("system-watcher".into())
         .spawn(move || {
+            sync_detector(&app, false);
             let mut last_thorough = Instant::now() - THOROUGH_EVERY;
             let mut last_quick = Instant::now() - WATCH_EVERY;
             loop {
@@ -385,7 +385,7 @@ fn spawn_system_watcher(app: AppHandle) {
                 let system = read_system(thorough);
                 last_quick = Instant::now();
                 let before = detect_info(&app);
-                sync_detector(&app);
+                sync_detector(&app, system.permissions.helper == "ready");
                 let after = detect_info(&app);
                 if before.running != after.running || before.needs_permission != after.needs_permission {
                     let _ = app.emit("auto-detect", after);
@@ -587,8 +587,10 @@ fn detect_info(app: &AppHandle) -> DetectInfo {
     DetectInfo {
         enabled: inner.detect_on,
         supported: keylock::CAN_MONITOR,
-        running: inner.monitor.is_some(),
-        needs_permission: inner.detect_on && inner.monitor.is_none() && inner.monitor_error.is_some(),
+        running: inner.monitor.as_ref().is_some_and(|m| m.alive()),
+        needs_permission: inner.detect_on
+            && !inner.monitor.as_ref().is_some_and(|m| m.alive())
+            && inner.monitor_error.is_some(),
     }
 }
 
@@ -611,32 +613,49 @@ fn auto_lock(app: &AppHandle) {
     }
 }
 
-pub(crate) fn sync_detector(app: &AppHandle) {
+pub(crate) fn sync_detector(app: &AppHandle, helper_ready: bool) {
     let state = app.state::<AppState>();
-    let mut inner = state.0.lock().unwrap();
-    if !inner.detect_on {
-        inner.monitor = None;
-        inner.monitor_error = None;
-        return;
-    }
-    if inner.monitor.is_some() {
-        return;
+    {
+        let mut inner = state.0.lock().unwrap();
+        if !inner.detect_on {
+            let old = inner.monitor.take();
+            inner.monitor_error = None;
+            drop(inner);
+            drop(old);
+            return;
+        }
+        if let Some(m) = &inner.monitor {
+            if m.alive() && (m.via_helper() || !helper_ready) {
+                return;
+            }
+        }
     }
     let handle = app.clone();
-    let detector = Mutex::new(cleaning::Detector::default());
-    let started = keylock::monitor(move |key| {
-        if detector.lock().unwrap().push(Instant::now(), key) {
-            let handle = handle.clone();
-            std::thread::spawn(move || auto_lock(&handle));
-        }
+    let started = keylock::monitor(move || {
+        let handle = handle.clone();
+        std::thread::spawn(move || auto_lock(&handle));
     });
-    match started {
-        Ok(monitor) => {
-            inner.monitor = Some(monitor);
-            inner.monitor_error = None;
-        }
-        Err(e) => inner.monitor_error = Some(e.to_string()),
+    let mut inner = state.0.lock().unwrap();
+    if !inner.detect_on {
+        drop(inner);
+        drop(started);
+        return;
     }
+    let old = match started {
+        Ok(monitor) => {
+            inner.monitor_error = None;
+            inner.monitor.replace(monitor)
+        }
+        Err(e) => {
+            inner.monitor_error = Some(e.to_string());
+            match &inner.monitor {
+                Some(m) if m.alive() => None,
+                _ => inner.monitor.take(),
+            }
+        }
+    };
+    drop(inner);
+    drop(old);
 }
 
 #[tauri::command]
@@ -645,14 +664,16 @@ fn get_auto_detect(app: AppHandle) -> DetectInfo {
 }
 
 #[tauri::command]
-fn set_auto_detect(app: AppHandle, enabled: bool) -> DetectInfo {
+async fn set_auto_detect(app: AppHandle, enabled: bool) -> DetectInfo {
     save_detect(&app, enabled);
     app.state::<AppState>().0.lock().unwrap().detect_on = enabled;
-    if enabled {
+    sync_detector(&app, false);
+    let mut info = detect_info(&app);
+    if enabled && !info.running {
         keylock::request_listen_access();
+        sync_detector(&app, false);
+        info = detect_info(&app);
     }
-    sync_detector(&app);
-    let info = detect_info(&app);
     let _ = app.emit("auto-detect", info.clone());
     info
 }
@@ -723,7 +744,6 @@ pub fn run() {
             shell::init_platform(app);
             shell::load_island_prefs(app.handle());
             app.state::<AppState>().0.lock().unwrap().detect_on = load_detect(app.handle());
-            sync_detector(app.handle());
             shell::create_main_window(app.handle())?;
             shell::create_tray(app.handle())?;
             let first_run = !welcomed(app.handle());

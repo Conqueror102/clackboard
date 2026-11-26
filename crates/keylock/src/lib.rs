@@ -14,6 +14,8 @@
 use std::fmt;
 use std::sync::Arc;
 
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+mod detect;
 #[cfg(target_os = "linux")]
 mod linux;
 #[cfg(target_os = "macos")]
@@ -224,7 +226,7 @@ impl std::error::Error for Error {}
 
 pub(crate) type Sink = Arc<dyn Fn(Event) + Send + Sync + 'static>;
 #[allow(dead_code)]
-pub(crate) type KeySink = Arc<dyn Fn(u16) + Send + Sync + 'static>;
+pub(crate) type CleaningSink = Arc<dyn Fn() + Send + Sync + 'static>;
 
 /// An engaged keyboard lock. The keyboard is released when this is dropped.
 pub struct Lock {
@@ -256,19 +258,35 @@ impl Drop for Monitor {
     }
 }
 
+impl Monitor {
+    pub fn alive(&self) -> bool {
+        #[cfg(target_os = "macos")]
+        return self.inner.alive();
+        #[cfg(not(target_os = "macos"))]
+        false
+    }
+
+    pub fn via_helper(&self) -> bool {
+        #[cfg(target_os = "macos")]
+        return self.inner.via_helper();
+        #[cfg(not(target_os = "macos"))]
+        false
+    }
+}
+
 pub const CAN_MONITOR: bool = cfg!(target_os = "macos");
 
-pub fn monitor<F>(on_key: F) -> Result<Monitor, Error>
+pub fn monitor<F>(on_cleaning: F) -> Result<Monitor, Error>
 where
-    F: Fn(u16) + Send + Sync + 'static,
+    F: Fn() + Send + Sync + 'static,
 {
     #[cfg(target_os = "macos")]
     {
-        macos::monitor(Arc::new(on_key)).map(|inner| Monitor { inner })
+        macos::monitor(Arc::new(on_cleaning)).map(|inner| Monitor { inner })
     }
     #[cfg(not(target_os = "macos"))]
     {
-        let _ = on_key;
+        let _ = on_cleaning;
         Err(Error::Unsupported("detecting cleaning is not available on this system yet".into()))
     }
 }

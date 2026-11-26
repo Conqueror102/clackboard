@@ -58,7 +58,7 @@ Real copy to reuse:
 - First run: one PermissionCard per missing permission comes before everything else, and "Lock keyboard" stays disabled until they are granted.
 - Lock: LockOverlay on every display.
 - Island: wings either side of the notch while arming and done; a compact card below it while locked, with the ring and time, "Keyboard locked", a one-line caption (replaced by the keys you press while you type) and "Hold to unlock" with the escape shortcut. Width (420–640 px), corner radius (0–48 px), size (small, medium, large) and, on macOS, which layer it sits on (everything, or app windows under the menu bar) are user settings, stored by the app and applied live. The preview stays up while a slider is held.
-- Automatic (macOS): "Detect cleaning", off by default. About nine different keys within half a second start a lock with `auto-arm-delay` and Cancel. Only timing is counted, never which keys.
+- Automatic (macOS): "Detect cleaning", off by default. Four or more keys held at once, or about nine different keys within half a second, start a lock with `auto-arm-delay` and Cancel. The keyboard helper watches and reports only that cleaning happened, never which keys.
 - Welcome tour: a 520 × 680 window on first launch and from the tray menu. Five steps (welcome, three ways out, set up the keyboard lock where the OS needs it, defaults, where Hushboard lives), one idea each, sentence case, no exclamation marks. A soft key tap, a rising fifth and a quiet "shh" play on launch (synthesised in `src/sound.ts`, off with the Launch sound switch, silent when started at login).
 - Tray / menu bar: StatusPill text plus "Lock for 2 min", "Lock until I unlock", "Open Hushboard", "Welcome tour", "Quit".
 

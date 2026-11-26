@@ -7,7 +7,7 @@ All notable changes to Hushboard are recorded here. The format follows [Keep a C
 ### Added
 
 - A welcome tour on first launch: the three ways out, setting up the keyboard lock, your defaults, and where to find Hushboard. It is also in the tray menu as "Welcome tour".
-- "Detect cleaning" (macOS, off by default): when about nine different keys are pressed within half a second, as a cloth wiping across the keys would, Hushboard starts a lock by itself with a short 1.5 second countdown and Cancel. Only the timing of presses is counted, never which keys. It needs Input Monitoring for the app, and stays quiet for 10 seconds after an unlock.
+- "Detect cleaning" (macOS, off by default): when four or more keys are held down at once, or about nine different keys are pressed within half a second, as a cloth wiping across the keys would, Hushboard starts a lock by itself with a short 1.5 second countdown and Cancel. The keyboard helper watches for it, so it needs no extra permission and works while a password field has Secure Input on; without the helper it falls back to Input Monitoring for the app. Only the timing and how many keys are down is counted, never which keys. It stays quiet for 10 seconds after an unlock.
 - "Stay on top of" for the island (macOS): Everything, or App windows to sit under the menu bar.
 - A soft launch sound, with a "Launch sound" switch in the panel. It stays quiet when Hushboard starts at login.
 - An Island section in the panel to set the island's width, corner radius and size, with a live preview while you adjust it. On Windows and Linux it styles the pill and the card.

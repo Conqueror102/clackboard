@@ -7,7 +7,8 @@
 //!   NULL, so the tap is created through the C API directly.)
 
 use crate::mac_helper::{self, HelperStatus};
-use crate::{Error, Event, Helper, KeySink, Keyboard, Kind, Options, Permissions, Sink, Status};
+use crate::detect::{Detector, Edge};
+use crate::{CleaningSink, Error, Event, Helper, Keyboard, Kind, Options, Permissions, Sink, Status};
 use core_foundation::base::TCFType;
 use core_foundation::boolean::CFBoolean;
 use core_foundation::dictionary::CFDictionary;
@@ -116,36 +117,42 @@ unsafe extern "C" fn tap_callback(_proxy: *mut c_void, etype: u32, event: CGEven
 }
 
 struct MonitorState {
-    on_key: KeySink,
+    on_cleaning: CleaningSink,
+    detector: std::sync::Mutex<Detector>,
     port: AtomicPtr<c_void>,
 }
 
 unsafe extern "C" fn monitor_callback(_proxy: *mut c_void, etype: u32, event: CGEventRef, user_info: *mut c_void) -> CGEventRef {
     let state = &*(user_info as *const MonitorState);
-    match etype {
+    let edge = match etype {
         TAP_DISABLED_BY_TIMEOUT | TAP_DISABLED_BY_USER_INPUT => {
             let port = state.port.load(Ordering::SeqCst);
             if !port.is_null() {
                 CGEventTapEnable(port as CFMachPortRef, true);
             }
+            None
         }
-        KEY_DOWN => {
-            if CGEventGetIntegerValueField(event, KEYBOARD_EVENT_AUTOREPEAT) == 0 {
-                let code = CGEventGetIntegerValueField(event, KEYBOARD_EVENT_KEYCODE);
-                (state.on_key)(code as u16);
-            }
+        KEY_DOWN if CGEventGetIntegerValueField(event, KEYBOARD_EVENT_AUTOREPEAT) == 0 => {
+            Some(Edge::Down(CGEventGetIntegerValueField(event, KEYBOARD_EVENT_KEYCODE) as u32))
         }
-        _ => {}
+        KEY_UP => Some(Edge::Up(CGEventGetIntegerValueField(event, KEYBOARD_EVENT_KEYCODE) as u32)),
+        _ => None,
+    };
+    if let Some(edge) = edge {
+        let hit = state.detector.lock().map(|mut d| d.push(std::time::Instant::now(), edge)).unwrap_or(false);
+        if hit {
+            (state.on_cleaning)();
+        }
     }
     event
 }
 
-pub struct Monitor {
+pub struct TapMonitor {
     stop: Arc<AtomicBool>,
     thread: Option<JoinHandle<()>>,
 }
 
-impl Monitor {
+impl TapMonitor {
     pub fn stop(&mut self) {
         self.stop.store(true, Ordering::SeqCst);
         if let Some(t) = self.thread.take() {
@@ -156,13 +163,45 @@ impl Monitor {
     }
 }
 
+pub enum Monitor {
+    Helper(mac_helper::HelperWatch),
+    Tap(TapMonitor),
+}
+
+impl Monitor {
+    pub fn stop(&mut self) {
+        match self {
+            Monitor::Helper(w) => w.release(),
+            Monitor::Tap(t) => t.stop(),
+        }
+    }
+
+    pub fn alive(&self) -> bool {
+        match self {
+            Monitor::Helper(w) => w.alive(),
+            Monitor::Tap(t) => t.thread.as_ref().is_some_and(|h| !h.is_finished()),
+        }
+    }
+
+    pub fn via_helper(&self) -> bool {
+        matches!(self, Monitor::Helper(_))
+    }
+}
+
 pub fn request_listen_access() {
     unsafe {
         CGRequestListenEventAccess();
     }
 }
 
-pub fn monitor(on_key: KeySink) -> Result<Monitor, Error> {
+pub fn monitor(on_cleaning: CleaningSink) -> Result<Monitor, Error> {
+    match mac_helper::watch(on_cleaning.clone()) {
+        Ok(watch) => Ok(Monitor::Helper(watch)),
+        Err(_) => tap_monitor(on_cleaning).map(Monitor::Tap),
+    }
+}
+
+fn tap_monitor(on_cleaning: CleaningSink) -> Result<TapMonitor, Error> {
     if !unsafe { CGPreflightListenEventAccess() } {
         return Err(Error::PermissionDenied("Input Monitoring is not allowed".into()));
     }
@@ -173,12 +212,16 @@ pub fn monitor(on_key: KeySink) -> Result<Monitor, Error> {
     let thread = std::thread::Builder::new()
         .name("keylock-monitor".into())
         .spawn(move || unsafe {
-            let state = Box::into_raw(Box::new(MonitorState { on_key, port: AtomicPtr::new(std::ptr::null_mut()) }));
+            let state = Box::into_raw(Box::new(MonitorState {
+                on_cleaning,
+                detector: std::sync::Mutex::new(Detector::default()),
+                port: AtomicPtr::new(std::ptr::null_mut()),
+            }));
             let raw = CGEventTapCreate(
                 K_CG_SESSION_EVENT_TAP,
                 K_CG_HEAD_INSERT_EVENT_TAP,
                 K_CG_EVENT_TAP_OPTION_LISTEN_ONLY,
-                1u64 << KEY_DOWN,
+                (1u64 << KEY_DOWN) | (1u64 << KEY_UP),
                 monitor_callback,
                 state as *mut c_void,
             );
@@ -218,7 +261,7 @@ pub fn monitor(on_key: KeySink) -> Result<Monitor, Error> {
         .map_err(|e| Error::Os(e.to_string()))?;
 
     match ready_rx.recv_timeout(Duration::from_secs(3)) {
-        Ok(Ok(())) => Ok(Monitor { stop, thread: Some(thread) }),
+        Ok(Ok(())) => Ok(TapMonitor { stop, thread: Some(thread) }),
         Ok(Err(e)) => {
             let _ = thread.join();
             Err(e)
