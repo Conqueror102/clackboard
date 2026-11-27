@@ -49,7 +49,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Hushboard version or commit
+      label: Clackboard version or commit
       placeholder: 0.1.0 or a commit hash
   - type: textarea
     id: logs

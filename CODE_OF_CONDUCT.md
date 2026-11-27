@@ -28,7 +28,7 @@ This applies in all project spaces (issues, pull requests, discussions, and any 
 
 ## Enforcement
 
-Report problems privately to the maintainers in the [Tekcify organisation](https://github.com/tekcify) (for example by contacting a maintainer directly, or through a private security advisory if nothing else fits). All reports are reviewed promptly and confidentially.
+Report problems privately to the maintainers of [Conqueror102/clackboard](https://github.com/Conqueror102/clackboard) (for example by contacting a maintainer directly, or through a private security advisory if nothing else fits). All reports are reviewed promptly and confidentially.
 
 Maintainers may take any action they find appropriate, from a private warning to a temporary or permanent ban, following the [Contributor Covenant enforcement guidelines](https://www.contributor-covenant.org/version/2/1/code_of_conduct/#enforcement-guidelines).
 

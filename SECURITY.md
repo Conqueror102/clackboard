@@ -6,7 +6,7 @@ Hushboard intercepts keyboard input, and on macOS it installs a helper that runs
 
 **Please don't open a public issue.** Report privately through GitHub instead:
 
-1. Go to the repository's **Security** tab → **Report a vulnerability** ([direct link](https://github.com/tekcify/hushboard/security/advisories/new)).
+1. Go to the repository's **Security** tab → **Report a vulnerability** ([direct link](https://github.com/Conqueror102/clackboard/security/advisories/new)).
 2. Describe the issue, the affected OS and version, and steps to reproduce. A proof of concept helps.
 
 We aim to acknowledge reports within 3 working days and to agree on a fix and disclosure timeline with you. We credit reporters in the advisory unless you'd rather stay anonymous.

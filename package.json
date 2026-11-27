@@ -6,10 +6,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/tekcify/hushboard.git"
+    "url": "git+https://github.com/Conqueror102/clackboard.git"
   },
-  "homepage": "https://github.com/tekcify/hushboard#readme",
-  "bugs": "https://github.com/tekcify/hushboard/issues",
+  "homepage": "https://github.com/Conqueror102/clackboard#readme",
+  "bugs": "https://github.com/Conqueror102/clackboard/issues",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -5,7 +5,7 @@ Thanks for helping. Hushboard is small on purpose: one job (lock the keyboard wh
 ## Ways to help
 
 - **Test on your hardware.** Windows and Linux (X11 and Wayland, GNOME and KDE) need the most testing. A report that says "worked on X with Y keyboard" is useful.
-- **Report bugs** with the [bug report form](https://github.com/tekcify/hushboard/issues/new/choose). Include your OS version, keyboard type and what the panel showed.
+- **Report bugs** with the [bug report form](https://github.com/Conqueror102/clackboard/issues/new/choose). Include your OS version, keyboard type and what the panel showed.
 - **Suggest features** with the feature request form. Explain the problem first, then the idea.
 - **Fix something.** Issues labelled `good first issue` are a good start.
 - **Security issues:** don't open an issue. See [SECURITY.md](SECURITY.md).
@@ -15,7 +15,7 @@ Thanks for helping. Hushboard is small on purpose: one job (lock the keyboard wh
 You need Node.js 20+, Rust stable, and [Tauri's prerequisites](https://tauri.app/start/prerequisites/) for your OS.
 
 ```bash
-git clone git@github.com:tekcify/hushboard.git
+git clone https://github.com/Conqueror102/clackboard.git
 cd hushboard
 npm install
 npm run tauri dev

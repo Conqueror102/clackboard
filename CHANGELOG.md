@@ -2,6 +2,18 @@
 
 All notable changes to Hushboard are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## Clackboard (unreleased)
+
+Clackboard is a fork of Hushboard that adds mechanical keyboard sounds.
+
+- A real switch sound on every key press and release, from Mechvibes packs (11 switches built in; add your own).
+- Stereo by key position, a little random pitch, volume, and a typing demo.
+- Windows, Linux and macOS (macOS asks for Input Monitoring once).
+- Detect cleaning now works on Windows and Linux, and reacts faster everywhere.
+- The macOS keyboard helper is Clackboard's own, so it never touches an installed Hushboard.
+
+Hushboard's history follows.
+
 ## [Unreleased]
 
 ### Added

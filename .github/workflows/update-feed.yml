@@ -1,5 +1,5 @@
 # When a release is published, copy its latest.json to the rolling "updater" release. The app's
-# updater reads https://github.com/tekcify/hushboard/releases/download/updater/latest.json, which
+# updater reads https://github.com/Conqueror102/clackboard/releases/download/updater/latest.json, which
 # works for betas too (GitHub's /releases/latest/ skips pre-releases) and only ever points at
 # releases a maintainer has published, never at a draft.
 name: Update feed
@@ -35,40 +35,7 @@ jobs:
           if ! gh release view updater --repo "$REPO" >/dev/null 2>&1; then
             gh release create updater --repo "$REPO" --prerelease \
               --title "Update feed (used by the app)" \
-              --notes "Holds latest.json for Hushboard's in-app updater. Downloads are on the versioned releases."
+              --notes "Holds latest.json for Clackboard's in-app updater. Downloads are on the versioned releases."
           fi
           gh release upload updater latest.json --repo "$REPO" --clobber
           echo "Update feed now points at $TAG:" && cat latest.json
-
-  cask:
-    runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-      REPO: ${{ github.repository }}
-      TAG: ${{ github.event.inputs.tag || github.event.release.tag_name }}
-    steps:
-      - name: Update the Homebrew cask
-        run: |
-          if [[ "$TAG" == updater || "$TAG" == *-* ]]; then
-            echo "Not a stable release, so the cask stays as it is." && exit 0
-          fi
-          if [[ -z "$TAP_TOKEN" ]]; then
-            echo "HOMEBREW_TAP_TOKEN is not set, so the cask is not updated." && exit 0
-          fi
-          version="${TAG#v}"
-          sha=$(gh release download "$TAG" --repo "$REPO" --pattern SHA256SUMS.txt --output - \
-            | awk -v f="Hushboard_${version}_universal.dmg" '$2 == f { print $1 }')
-          if [[ -z "$sha" ]]; then
-            echo "SHA256SUMS.txt in $TAG has no line for the DMG." && exit 1
-          fi
-          git clone --depth 1 "https://x-access-token:${TAP_TOKEN}@github.com/tekcify/homebrew-tap.git" tap
-          cd tap
-          sed -i -E "s/^  version \".*\"/  version \"$version\"/; s/^  sha256 \".*\"/  sha256 \"$sha\"/" Casks/hushboard.rb
-          if git diff --quiet; then
-            echo "The cask is already at $version." && exit 0
-          fi
-          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            commit -am "Update Hushboard to $version"
-          git push
-          echo "Cask updated to $version ($sha)."

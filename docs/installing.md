@@ -1,82 +1,65 @@
-# Installing Hushboard
+# Installing Clackboard
 
-Download the file for your system from the [latest release](https://github.com/tekcify/hushboard/releases). Each release lists a `SHA256SUMS.txt` to check your download against.
+Download the file for your system from the [latest release](https://github.com/Conqueror102/clackboard/releases/latest).
 
-> **The macOS app is signed and notarized by Apple.** The Windows installer isn't signed by Microsoft yet, so Windows warns you the first time you run it. The steps below get past that safely. Once Hushboard is installed, it updates itself, and updates are signed by the Hushboard team and checked before installing.
+> **Clackboard builds aren't signed by Apple or Microsoft yet**, so your system warns you the first time you open it. The steps below get past that. There are no automatic updates yet: download a new release to update.
 
 ## macOS (11 Big Sur or later, Apple Silicon or Intel)
 
-With [Homebrew](https://brew.sh), one command does steps 1 to 3:
+1. Download `Clackboard_<version>_universal.dmg`, open it, and drag **Clackboard** into **Applications**.
+2. Open Clackboard. macOS says it can't check the app: click **Done**, then go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
+3. The panel opens under the icon in the menu bar. There's no Dock icon.
+
+**Keyboard sounds** need **Input Monitoring**. The first time, macOS asks: allow it, or use the **Open Input Monitoring** button in the panel and switch on **Clackboard**. Sounds start by themselves. While you type a password, macOS hides your keys from every app, so Clackboard stays silent there.
+
+**The keyboard lock** works best with the keyboard helper: press **Install helper** in the panel, enter your Mac password, then switch on **Clackboard Keyboard Helper** under Input Monitoring.
+
+**Uninstall:** quit Clackboard from its panel, move it to the Bin, then remove the helper:
 
 ```bash
-brew install --cask tekcify/tap/hushboard
+sudo "/Library/PrivilegedHelperTools/Clackboard Keyboard Helper.app/Contents/MacOS/clackboard-keyhelper" --keyhelper-uninstall
 ```
-
-Without Homebrew:
-
-1. Download `Hushboard_<version>_universal.dmg` and open it.
-2. Drag **Hushboard** into **Applications**.
-3. Open Hushboard from Applications. macOS asks if you're sure you want to open an app downloaded from the internet. Click **Open**.
-4. Hushboard opens a short welcome tour. When it ends, the panel opens under the keyboard icon in the menu bar. There's no Dock icon. You can replay the tour from the icon's right-click menu.
-
-Then set up the keyboard helper from the panel (recommended, it makes the lock work everywhere):
-
-5. Press **Install helper** and enter your Mac password.
-6. When macOS asks, click **Open System Settings** and switch on **Hushboard Keyboard Helper** under Input Monitoring. The panel shows **Ready** by itself.
-
-> Updating from 1.0.0 asks you to update the helper once and switch it on again, because it's now signed by Tekcify. After that, updates keep it switched on.
-
-**Uninstall:** quit Hushboard from its panel, move it from Applications to the Bin, then remove the helper:
-
-```bash
-sudo "/Library/PrivilegedHelperTools/Hushboard Keyboard Helper.app/Contents/MacOS/hushboard-keyhelper" --keyhelper-uninstall
-```
-
-If you installed with Homebrew, `brew uninstall --cask hushboard` removes the app and the helper. Add `--zap` to remove your settings too.
 
 ## Windows 10 and 11
 
-1. Download `Hushboard_<version>_x64-setup.exe` and run it.
+1. Download `Clackboard_<version>_x64-setup.exe` and run it.
 2. If Windows shows "Windows protected your PC", click **More info**, then **Run anyway**.
-3. The installer sets Hushboard up for your user account only, with no administrator rights needed. On Windows 10 it may download Microsoft WebView2 if it's missing.
-4. Hushboard appears in the system tray. If you don't see it, click the **^** arrow next to the clock; you can drag the icon onto the taskbar to keep it visible.
+3. The installer sets Clackboard up for your user account only, with no administrator rights needed. On Windows 10 it may download Microsoft WebView2 if it's missing.
+4. Clackboard appears in the system tray. If you don't see it, click the **^** arrow next to the clock; you can drag the icon onto the taskbar to keep it visible.
 
-Windows locks every keyboard at once. **Ctrl + Alt + Del** always works, as Windows intends.
+Sounds and the lock need no permission on Windows. While the keyboard is locked, **Ctrl + Alt + Del** always works, as Windows intends.
 
-**Uninstall:** Settings → Apps → Installed apps → Hushboard → Uninstall.
+**Uninstall:** Settings → Apps → Installed apps → Clackboard → Uninstall.
 
 ## Linux (x86-64)
 
-Pick the package for your distribution:
-
 | File | Install |
 | --- | --- |
-| `Hushboard_<version>_amd64.deb` (Ubuntu, Debian, Mint, Pop!_OS) | `sudo apt install ./Hushboard_<version>_amd64.deb` |
-| `Hushboard-<version>-1.x86_64.rpm` (Fedora, openSUSE). Stable releases only; on a beta, use the AppImage | `sudo dnf install ./Hushboard-<version>-1.x86_64.rpm` |
-| `Hushboard_<version>_amd64.AppImage` (any distribution) | `chmod +x Hushboard_*.AppImage`, then run it |
+| `Clackboard_<version>_amd64.deb` (Ubuntu, Debian, Mint, Pop!_OS) | `sudo apt install ./Clackboard_<version>_amd64.deb` |
+| `Clackboard-<version>-1.x86_64.rpm` (Fedora, openSUSE) | `sudo dnf install ./Clackboard-<version>-1.x86_64.rpm` |
+| `Clackboard_<version>_amd64.AppImage` (any distribution) | `chmod +x Clackboard_*.AppImage`, then run it |
 
-Hushboard needs read access to your keyboards. Add yourself to the `input` group once, then log out and back in:
+Clackboard reads your keyboards directly (for sounds and the lock), so it works on X11 and Wayland. Add yourself to the `input` group once, then log out and back in:
 
 ```bash
 sudo usermod -aG input $USER
 ```
 
-> Members of the `input` group can read all keyboards and mice, so any program you run gets that access too. Only do this on a computer you trust. A more contained option is planned.
+> Members of the `input` group can read all keyboards and mice, so any program you run gets that access too. Only do this on a computer you trust.
 
-- **GNOME:** tray icons need the [AppIndicator extension](https://extensions.gnome.org/extension/615/appindicator-support/) (preinstalled on Ubuntu). Without it, use the Hushboard window.
-- **Updates:** the AppImage updates itself. The `.deb` and `.rpm` packages tell you when there's a new version to download.
+- **GNOME:** tray icons need the [AppIndicator extension](https://extensions.gnome.org/extension/615/appindicator-support/) (preinstalled on Ubuntu). Without it, use the Clackboard window.
 
-**Uninstall:** `sudo apt remove hushboard` or `sudo dnf remove hushboard`, or delete the AppImage. Optionally remove yourself from the group: `sudo gpasswd -d $USER input`.
+**Uninstall:** `sudo apt remove clackboard` or `sudo dnf remove clackboard`, or delete the AppImage. Optionally remove yourself from the group: `sudo gpasswd -d $USER input`.
 
 ## Check a download
 
 ```bash
-shasum -a 256 Hushboard_*        # macOS
-sha256sum Hushboard_*            # Linux
+shasum -a 256 Clackboard_*        # macOS
+sha256sum Clackboard_*            # Linux
 ```
 
 ```powershell
-Get-FileHash .\Hushboard_*.exe   # Windows PowerShell
+Get-FileHash .\Clackboard_*.exe   # Windows PowerShell
 ```
 
-The result should match the line for that file in `SHA256SUMS.txt`.
+Compare with `SHA256SUMS.txt` on the release page.
