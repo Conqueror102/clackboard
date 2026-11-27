@@ -166,7 +166,7 @@ function tasks(p: Permissions): TaskView[] {
       key: "allow",
       state: approved ? "done" : installed ? "active" : "todo",
       title: "Allow it in Input Monitoring",
-      meta: approved ? "Allowed." : "Switch on Hushboard Keyboard Helper. Clackboard notices on its own.",
+      meta: approved ? "Allowed." : "Switch on Clackboard Keyboard Helper. Clackboard notices on its own.",
       action:
         installed && !approved
           ? `<button class="hb-btn hb-btn--primary" type="button" data-action="helper-settings">Open settings</button>`

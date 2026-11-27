@@ -93,12 +93,12 @@ xcrun notarytool store-credentials hushboard --team-id 44969WH79Y
 Then run the script with the profile name. It submits the DMG, waits, staples the DMG and the app, and checks both with Gatekeeper:
 
 ```bash
-HUSHBOARD_NOTARY_PROFILE=hushboard ./scripts/build-macos-signed.sh
+CLACKBOARD_NOTARY_PROFILE=clackboard ./scripts/build-macos-signed.sh
 ```
 
 Set `TAURI_SIGNING_PRIVATE_KEY` (and its password) first if you also want the updater files.
 
-Every macOS bundle step runs `scripts/bundle-mac-helper.mjs`, which builds the small `hushboard-keyhelper` binary from `crates/keylock`, wraps it in `Hushboard Keyboard Helper.app` and signs it with `APPLE_SIGNING_IDENTITY` (hardened runtime and timestamp), or ad-hoc when that isn't set. Tauri copies it to `Contents/Helpers/` and seals it into the app's signature, so notarizing the app covers it. When the app installs the helper, it uses this copy if it carries a Developer ID signature, which keeps the helper's Input Monitoring grant across updates. Ad-hoc builds fall back to signing a copy of the app's own executable on the user's Mac.
+Every macOS bundle step runs `scripts/bundle-mac-helper.mjs`, which builds the small `clackboard-keyhelper` binary from `crates/keylock`, wraps it in `Clackboard Keyboard Helper.app` and signs it with `APPLE_SIGNING_IDENTITY` (hardened runtime and timestamp), or ad-hoc when that isn't set. Tauri copies it to `Contents/Helpers/` and seals it into the app's signature, so notarizing the app covers it. When the app installs the helper, it uses this copy if it carries a Developer ID signature, which keeps the helper's Input Monitoring grant across updates. Ad-hoc builds fall back to signing a copy of the app's own executable on the user's Mac.
 
 For signed CI builds, add `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_API_ISSUER`, `APPLE_API_KEY` and `APPLE_API_KEY_PATH` (or `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`) secrets and pass them to `tauri-action` on the macOS job only.
 

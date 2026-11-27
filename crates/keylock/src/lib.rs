@@ -409,12 +409,12 @@ pub struct KeyEvent {
 
 pub(crate) type KeySink = Arc<dyn Fn(KeyEvent) + Send + Sync + 'static>;
 
-/// This platform can listen to keys (macOS comes in a later version).
-pub const CAN_LISTEN: bool = cfg!(any(windows, target_os = "linux"));
+/// This platform can listen to keys.
+pub const CAN_LISTEN: bool = cfg!(any(windows, target_os = "linux", target_os = "macos"));
 
 /// A running key listener. Stops when dropped.
 pub struct Listener {
-    #[cfg(any(windows, target_os = "linux"))]
+    #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
     inner: platform::Listener,
 }
 
@@ -422,7 +422,7 @@ impl Listener {
     pub fn stop(self) {}
 }
 
-#[cfg(any(windows, target_os = "linux"))]
+#[cfg(any(windows, target_os = "linux", target_os = "macos"))]
 impl Drop for Listener {
     fn drop(&mut self) {
         self.inner.stop();
@@ -434,15 +434,16 @@ impl Drop for Listener {
 ///
 /// * Windows: a pass-through `WH_KEYBOARD_LL` hook. No permission needed.
 /// * Linux: reads `/dev/input/event*` keyboards without grabbing them (the `input` group).
+/// * macOS: a listen-only session event tap (Input Monitoring). Silent during Secure Input.
 pub fn listen<F>(on_key: F) -> Result<Listener, Error>
 where
     F: Fn(KeyEvent) + Send + Sync + 'static,
 {
-    #[cfg(any(windows, target_os = "linux"))]
+    #[cfg(any(windows, target_os = "linux", target_os = "macos"))]
     {
         platform::listen(Arc::new(on_key)).map(|inner| Listener { inner })
     }
-    #[cfg(not(any(windows, target_os = "linux")))]
+    #[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
     {
         let _ = on_key;
         Err(Error::Unsupported("keyboard sounds are not available on this system yet".into()))

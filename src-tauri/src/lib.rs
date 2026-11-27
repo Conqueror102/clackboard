@@ -389,6 +389,7 @@ fn spawn_system_watcher(app: AppHandle) {
                 last_quick = Instant::now();
                 let before = detect_info(&app);
                 sync_detector(&app, system.permissions.helper == "ready");
+                sound::retry(&app);
                 let after = detect_info(&app);
                 if before.running != after.running || before.needs_permission != after.needs_permission {
                     let _ = app.emit("auto-detect", after);

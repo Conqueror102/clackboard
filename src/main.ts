@@ -561,7 +561,7 @@ function helperCard(p: Permissions): string {
       return body(
         "Action needed",
         "hb-pill--attention",
-        "Switch on <b>Hushboard Keyboard Helper</b> in Input Monitoring. Clackboard notices on its own.",
+        "Switch on <b>Clackboard Keyboard Helper</b> in Input Monitoring. Clackboard notices on its own.",
         `<button class="hb-btn hb-btn--attention" type="button" data-action="helper-settings">Open Input Monitoring</button>
          <button class="hb-btn hb-btn--ghost" type="button" data-action="helper-prompt">Ask again</button>`,
       );

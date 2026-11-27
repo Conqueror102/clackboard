@@ -1,8 +1,8 @@
 {
-  "name": "hushboard",
+  "name": "clackboard",
   "private": true,
   "version": "1.0.0",
-  "description": "Lock the keyboard while you clean it. macOS, Windows and Linux.",
+  "description": "Mechanical keyboard sounds, and a keyboard lock for cleaning. macOS, Windows and Linux.",
   "license": "MIT",
   "repository": {
     "type": "git",

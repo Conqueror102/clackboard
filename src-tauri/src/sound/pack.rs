@@ -114,7 +114,7 @@ pub fn scan(root: &Path, builtin: bool) -> Vec<PackInfo> {
         let id = if builtin { folder } else { format!("user:{folder}") };
         out.push(PackInfo { id, name, builtin, has_release, dir: path });
     }
-    out.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    out.sort_by_key(|p| p.name.to_lowercase());
     out
 }
 

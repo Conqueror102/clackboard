@@ -67,6 +67,8 @@ export interface SoundInfo {
   packs: SoundPack[];
   supported: boolean;
   listening: boolean;
+  /** The system hasn't allowed key listening yet (macOS Input Monitoring, Linux input group). */
+  needsPermission: boolean;
   error: string | null;
 }
 
@@ -251,6 +253,7 @@ let simSound: SoundInfo = {
   ],
   supported: true,
   listening: true,
+  needsPermission: false,
   error: null,
 };
 let simIsland: IslandPrefs = { width: null, radius: null, scale: null, layer: null };
@@ -264,6 +267,10 @@ export const api = {
     if (!inTauri) simSound = { ...simSound, prefs, listening: prefs.enabled };
     return inTauri ? call("set_sound", { prefs }) : Promise.resolve(simSound);
   },
+
+  /** Fires when sounds start by themselves (for example once Input Monitoring is allowed). */
+  onSound: async (cb: (s: SoundInfo) => void): Promise<() => void> =>
+    inTauri ? on<SoundInfo>("sound-changed", cb) : () => {},
 
   soundDemo: (): Promise<void> => (inTauri ? call("sound_demo") : Promise.resolve()),
 

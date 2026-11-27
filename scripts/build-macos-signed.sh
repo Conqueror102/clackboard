@@ -3,8 +3,8 @@ set -euo pipefail
 
 IDENTITY="${APPLE_SIGNING_IDENTITY:-Developer ID Application: TEKCIFY TECHNOLOGIES LTD (44969WH79Y)}"
 export APPLE_SIGNING_IDENTITY="$IDENTITY"
-TARGET="${HUSHBOARD_TARGET:-universal-apple-darwin}"
-PROFILE="${HUSHBOARD_NOTARY_PROFILE:-}"
+TARGET="${CLACKBOARD_TARGET:-universal-apple-darwin}"
+PROFILE="${CLACKBOARD_NOTARY_PROFILE:-}"
 
 cd "$(dirname "$0")/.."
 
@@ -46,7 +46,7 @@ if [[ -n "$PROFILE" ]]; then
   spctl --assess --type execute --verbose=2 "$app"
   spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
 else
-  echo "HUSHBOARD_NOTARY_PROFILE is not set, so the build is signed but not notarized."
+  echo "CLACKBOARD_NOTARY_PROFILE is not set, so the build is signed but not notarized."
 fi
 
 echo "App: $app"

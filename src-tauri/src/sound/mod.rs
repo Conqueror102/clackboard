@@ -16,7 +16,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 const DEFAULT_PACK: &str = "eg-oreo";
 
@@ -50,6 +50,9 @@ pub struct SoundInfo {
     supported: bool,
     /// The key listener is running.
     listening: bool,
+    /// The system hasn't allowed Clackboard to hear key presses yet (macOS Input Monitoring,
+    /// Linux `input` group). Sounds start by themselves once it does.
+    needs_permission: bool,
     error: Option<String>,
 }
 
@@ -58,6 +61,9 @@ struct Inner {
     listener: Option<keylock::Listener>,
     loaded_pack: Option<String>,
     error: Option<String>,
+    needs_permission: bool,
+    /// The system prompt for permission was shown this session (it is only shown once).
+    asked: bool,
 }
 
 /// Read from the key listener's thread, so kept outside the main lock.
@@ -78,7 +84,14 @@ pub struct SoundState {
 impl SoundState {
     pub fn new() -> Self {
         Self {
-            inner: Mutex::new(Inner { prefs: SoundPrefs::default(), listener: None, loaded_pack: None, error: None }),
+            inner: Mutex::new(Inner {
+                prefs: SoundPrefs::default(),
+                listener: None,
+                loaded_pack: None,
+                error: None,
+                needs_permission: false,
+                asked: false,
+            }),
             live: Arc::new(Live {
                 pack: Mutex::new(None),
                 release: true.into(),
@@ -221,6 +234,7 @@ fn apply(app: &AppHandle, state: &SoundState, prefs: SoundPrefs) {
     state.live.stereo.store(prefs.stereo, Ordering::Relaxed);
     state.live.vary.store(prefs.vary_pitch, Ordering::Relaxed);
     inner.error = None;
+    inner.needs_permission = false;
 
     if prefs.enabled {
         if inner.loaded_pack.as_deref() != Some(prefs.pack.as_str()) {
@@ -244,6 +258,14 @@ fn apply(app: &AppHandle, state: &SoundState, prefs: SoundPrefs) {
             let engine = state.engine.clone();
             match keylock::listen(move |k| live.on_key(&engine, k.code, k.down)) {
                 Ok(l) => inner.listener = Some(l),
+                Err(keylock::Error::PermissionDenied(_)) => {
+                    inner.needs_permission = true;
+                    inner.error = Some(permission_hint().into());
+                    if !inner.asked {
+                        inner.asked = true;
+                        keylock::request_listen_access(); // macOS: the system prompt, once
+                    }
+                }
                 Err(e) => inner.error = Some(e.to_string()),
             }
         }
@@ -251,6 +273,35 @@ fn apply(app: &AppHandle, state: &SoundState, prefs: SoundPrefs) {
         l.stop();
     }
     inner.prefs = prefs;
+}
+
+fn permission_hint() -> &'static str {
+    if cfg!(target_os = "macos") {
+        "Allow Clackboard in System Settings → Privacy & Security → Input Monitoring so it can hear which keys you press. Sounds start by themselves."
+    } else if cfg!(target_os = "linux") {
+        "Clackboard needs read access to your keyboards. Run `sudo usermod -aG input $USER`, then log out and back in."
+    } else {
+        "Clackboard isn't allowed to hear key presses."
+    }
+}
+
+/// Start the listener once the system allows it (or after a failure). Called every couple of
+/// seconds by the system watcher; cheap when nothing needs doing. Returns true on a change.
+pub fn retry(app: &AppHandle) -> bool {
+    let state = app.state::<SoundState>();
+    let prefs = {
+        let inner = state.inner.lock().unwrap();
+        if !inner.prefs.enabled || inner.listener.is_some() || !inner.needs_permission {
+            return false;
+        }
+        inner.prefs.clone()
+    };
+    apply(app, &state, prefs);
+    let started = state.inner.lock().unwrap().listener.is_some();
+    if started {
+        let _ = app.emit("sound-changed", info(app, &state));
+    }
+    started
 }
 
 fn info(app: &AppHandle, state: &SoundState) -> SoundInfo {
@@ -265,6 +316,7 @@ fn info(app: &AppHandle, state: &SoundState) -> SoundInfo {
         packs,
         supported: keylock::CAN_LISTEN,
         listening: inner.listener.is_some(),
+        needs_permission: inner.needs_permission,
         error: inner.error.clone(),
     }
 }

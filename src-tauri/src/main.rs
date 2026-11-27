@@ -6,5 +6,5 @@ fn main() {
     if let Some(code) = keylock::helper_main() {
         std::process::exit(code);
     }
-    hushboard_lib::run()
+    clackboard_lib::run()
 }

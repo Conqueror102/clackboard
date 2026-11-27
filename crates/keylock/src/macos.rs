@@ -227,7 +227,7 @@ fn tap_monitor(on_cleaning: CleaningSink) -> Result<TapMonitor, Error> {
             );
             if raw.is_null() {
                 drop(Box::from_raw(state));
-                let _ = ready_tx.send(Err(Error::PermissionDenied("macOS refused to let Hushboard watch key presses".into())));
+                let _ = ready_tx.send(Err(Error::PermissionDenied("macOS refused to let Clackboard watch key presses".into())));
                 return;
             }
             (*state).port.store(raw as *mut c_void, Ordering::SeqCst);
@@ -385,7 +385,7 @@ pub fn engage(options: &Options, sink: Sink) -> Result<Lock, Error> {
             mac_helper::lock(&ids, sink).map(Lock::Hardware)
         }
         HelperStatus::NeedsApproval => Err(Error::PermissionDenied(
-            "switch on Hushboard Keyboard Helper in System Settings → Privacy & Security → Input Monitoring".into(),
+            "switch on Clackboard Keyboard Helper in System Settings → Privacy & Security → Input Monitoring".into(),
         )),
         HelperStatus::Outdated => Err(Error::Os("the keyboard helper needs an update (press Update helper)".into())),
         HelperStatus::Missing => engage_tap(sink).map(Lock::Tap),
@@ -502,4 +502,160 @@ fn engage_tap(sink: Sink) -> Result<TapLock, Error> {
 #[allow(dead_code)]
 pub fn secure_input_enabled() -> bool {
     unsafe { IsSecureEventInputEnabled() != 0 }
+}
+
+// ---------- Listening: a listen-only session tap, for sounds ----------
+//
+// Needs Input Monitoring for the app. Like any event tap it hears nothing while Secure Input is
+// on (a focused password field), so password typing stays silent. While the keyboard is locked
+// the tap hears nothing either: the helper seizes the hardware, and the fallback lock deletes
+// key events before they reach the session.
+
+/// Device-dependent modifier bits (`NX_DEVICE*KEYMASK`), so left and right keys are told apart.
+fn modifier_mask(code: i64) -> Option<u64> {
+    Some(match code {
+        59 => 0x0000_0001, // left control
+        56 => 0x0000_0002, // left shift
+        60 => 0x0000_0004, // right shift
+        55 => 0x0000_0008, // left command
+        54 => 0x0000_0010, // right command
+        58 => 0x0000_0020, // left option
+        61 => 0x0000_0040, // right option
+        62 => 0x0000_2000, // right control
+        63 => 0x0080_0000, // fn
+        _ => return None,
+    })
+}
+
+struct ListenState {
+    sink: crate::KeySink,
+    port: AtomicPtr<c_void>,
+    held: crate::Held,
+}
+
+impl ListenState {
+    fn emit(&self, code: i64, down: bool) {
+        let id = (code as usize) & 0x1FF;
+        if self.held.set(id, down) {
+            let name = crate::keycode::from_mac(code as u16).unwrap_or("Unidentified");
+            (self.sink)(crate::KeyEvent { code: name, down });
+        }
+    }
+}
+
+unsafe extern "C" fn listen_callback(_proxy: *mut c_void, etype: u32, event: CGEventRef, user_info: *mut c_void) -> CGEventRef {
+    let state = &*(user_info as *const ListenState);
+    match etype {
+        TAP_DISABLED_BY_TIMEOUT | TAP_DISABLED_BY_USER_INPUT => {
+            let port = state.port.load(Ordering::SeqCst);
+            if !port.is_null() {
+                CGEventTapEnable(port as CFMachPortRef, true);
+            }
+        }
+        KEY_DOWN if CGEventGetIntegerValueField(event, KEYBOARD_EVENT_AUTOREPEAT) == 0 => {
+            state.emit(CGEventGetIntegerValueField(event, KEYBOARD_EVENT_KEYCODE), true);
+        }
+        KEY_UP => state.emit(CGEventGetIntegerValueField(event, KEYBOARD_EVENT_KEYCODE), false),
+        FLAGS_CHANGED => {
+            // Modifiers send no key down or up, only a change of flags: read which way it went.
+            let code = CGEventGetIntegerValueField(event, KEYBOARD_EVENT_KEYCODE);
+            if code == 57 {
+                // Caps Lock reports once per press: play it as a full press.
+                state.emit(code, true);
+                state.emit(code, false);
+            } else if let Some(mask) = modifier_mask(code) {
+                state.emit(code, CGEventGetFlags(event) & mask != 0);
+            }
+        }
+        _ => {}
+    }
+    event
+}
+
+pub struct Listener {
+    stop: Arc<AtomicBool>,
+    thread: Option<JoinHandle<()>>,
+}
+
+impl Listener {
+    pub fn stop(&mut self) {
+        self.stop.store(true, Ordering::SeqCst);
+        if let Some(t) = self.thread.take() {
+            if t.thread().id() != std::thread::current().id() {
+                let _ = t.join();
+            }
+        }
+    }
+}
+
+pub fn listen(sink: crate::KeySink) -> Result<Listener, Error> {
+    if !unsafe { CGPreflightListenEventAccess() } {
+        return Err(Error::PermissionDenied("Input Monitoring is not allowed".into()));
+    }
+    let stop = Arc::new(AtomicBool::new(false));
+    let stop_thread = stop.clone();
+    let (ready_tx, ready_rx) = mpsc::channel::<Result<(), Error>>();
+
+    let thread = std::thread::Builder::new()
+        .name("keylock-listen".into())
+        .spawn(move || unsafe {
+            let state = Box::into_raw(Box::new(ListenState {
+                sink,
+                port: AtomicPtr::new(std::ptr::null_mut()),
+                held: crate::Held::new(),
+            }));
+            let raw = CGEventTapCreate(
+                K_CG_SESSION_EVENT_TAP,
+                K_CG_HEAD_INSERT_EVENT_TAP,
+                K_CG_EVENT_TAP_OPTION_LISTEN_ONLY,
+                (1u64 << KEY_DOWN) | (1u64 << KEY_UP) | (1u64 << FLAGS_CHANGED),
+                listen_callback,
+                state as *mut c_void,
+            );
+            if raw.is_null() {
+                drop(Box::from_raw(state));
+                let _ = ready_tx.send(Err(Error::PermissionDenied("macOS refused to let Clackboard hear key presses".into())));
+                return;
+            }
+            (*state).port.store(raw as *mut c_void, Ordering::SeqCst);
+            let port = CFMachPort::wrap_under_create_rule(raw);
+            let source = match port.create_runloop_source(0) {
+                Ok(s) => s,
+                Err(()) => {
+                    CFMachPortInvalidate(raw);
+                    drop(port);
+                    drop(Box::from_raw(state));
+                    let _ = ready_tx.send(Err(Error::Os("could not create a run loop source".into())));
+                    return;
+                }
+            };
+            let run_loop = CFRunLoop::get_current();
+            run_loop.add_source(&source, kCFRunLoopCommonModes);
+            CGEventTapEnable(raw, true);
+            let _ = ready_tx.send(Ok(()));
+
+            while !stop_thread.load(Ordering::SeqCst) {
+                CFRunLoop::run_in_mode(kCFRunLoopDefaultMode, Duration::from_millis(200), false);
+            }
+
+            CGEventTapEnable(raw, false);
+            run_loop.remove_source(&source, kCFRunLoopCommonModes);
+            CFMachPortInvalidate(raw);
+            drop(source);
+            drop(port);
+            drop(Box::from_raw(state));
+        })
+        .map_err(|e| Error::Os(e.to_string()))?;
+
+    match ready_rx.recv_timeout(Duration::from_secs(3)) {
+        Ok(Ok(())) => Ok(Listener { stop, thread: Some(thread) }),
+        Ok(Err(e)) => {
+            let _ = thread.join();
+            Err(e)
+        }
+        Err(_) => {
+            stop.store(true, Ordering::SeqCst);
+            Err(Error::Os("the key listener did not start in time".into()))
+        }
+    }
 }

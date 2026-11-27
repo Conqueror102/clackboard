@@ -1,13 +1,13 @@
 [package]
-name = "hushboard"
+name = "clackboard"
 version = "1.0.0"
 description = "Mechanical keyboard sounds, and a keyboard lock for cleaning."
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/tekcify/hushboard"
+repository = "https://github.com/tekcify/hushboard" # upstream; update when Clackboard has its own repo
 
 [lib]
-name = "hushboard_lib"
+name = "clackboard_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

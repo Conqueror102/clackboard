@@ -8,6 +8,7 @@ const $ = (id: string) => document.getElementById(id) as HTMLElement;
 const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 let info: SoundInfo | null = null;
+const isMac = /Mac/i.test(navigator.platform || navigator.userAgent);
 let packsOpen = false;
 
 const TOGGLES: { key: "release" | "stereo" | "varyPitch"; label: string; icon: IconName }[] = [
@@ -74,6 +75,11 @@ function render() {
         <button class="hb-btn hb-btn--ghost" type="button" id="snd-folder">Add your own…</button>
       </div>`;
   }
+  if (p.enabled && info.needsPermission && isMac) {
+    html += `<div class="hb-row app__island-actions">
+        <button class="hb-btn hb-btn--primary" type="button" id="snd-allow">Open Input Monitoring</button>
+      </div>`;
+  }
   box.innerHTML = html;
 
   if (info.error) {
@@ -130,6 +136,7 @@ export async function initSounds() {
       void saving.then(() => api.soundDemo());
       return;
     }
+    if (t.closest("#snd-allow")) void api.openHelperSettings();
     if (t.closest("#snd-demo")) void api.soundDemo();
     if (t.closest("#snd-folder")) void api.openPacksFolder();
   });
@@ -141,6 +148,11 @@ export async function initSounds() {
     input.style.setProperty("--p", `${(v / 150) * 100}%`);
     $("snd-volume-v").textContent = `${v}%`;
     update({ volume: v / 100 }, false);
+  });
+
+  await api.onSound((next) => {
+    info = next;
+    render();
   });
 
   // Coming back to the panel after adding a pack to the folder: show it.

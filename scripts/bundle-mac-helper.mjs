@@ -10,9 +10,9 @@ const targetDir = resolve(root, process.env.CARGO_TARGET_DIR || "target");
 const host = execFileSync("rustc", ["-vV"], { encoding: "utf8" }).match(/^host: (.+)$/m)[1];
 const triple = process.env.TAURI_ENV_TARGET_TRIPLE || host;
 const identity = process.env.APPLE_SIGNING_IDENTITY || "-";
-const name = "hushboard-keyhelper";
+const name = "clackboard-keyhelper";
 const out = join(targetDir, "mac-helper");
-const bundle = join(out, "Hushboard Keyboard Helper.app");
+const bundle = join(out, "Clackboard Keyboard Helper.app");
 
 const run = (cmd, args, opts = {}) => execFileSync(cmd, args, { stdio: "inherit", cwd: root, ...opts });
 
@@ -34,7 +34,7 @@ if (triple === "universal-apple-darwin") {
 rmSync(bundle, { recursive: true, force: true });
 run(exe, ["--keyhelper-write-bundle", bundle]);
 
-const sign = ["--force", "--sign", identity, "--identifier", "app.hushboard.keyhelper"];
+const sign = ["--force", "--sign", identity, "--identifier", "app.clackboard.keyhelper"];
 if (identity !== "-") sign.push("--options", "runtime", "--timestamp");
 run("codesign", [...sign, bundle]);
 run("codesign", ["--verify", "--strict", bundle]);

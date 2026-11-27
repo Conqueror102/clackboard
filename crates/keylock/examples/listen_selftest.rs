@@ -4,6 +4,7 @@
 //!   1. the listener hears every press and release, with the right key names;
 //!   2. two listeners can run at once (sounds + cleaning detection share one hook);
 //!   3. the cleaning monitor fires once.
+//!
 //! A keyboard lock is engaged first, so the synthetic keys never reach any app. Keys you press
 //! during the ~1 second test are swallowed too.
 //!

@@ -1,8 +1,8 @@
 //! The macOS keyboard helper: a small root daemon that seizes keyboards on the app's behalf.
 //!
 //! Modelled on Karabiner-Elements' Core-Service (Unlicense):
-//! * The helper is an app bundle, "Hushboard Keyboard Helper.app", signed with the identifier
-//!   `app.hushboard.keyhelper`, so System Settings lists it by name. Release builds ship it
+//! * The helper is an app bundle, "Clackboard Keyboard Helper.app", signed with the identifier
+//!   `app.clackboard.keyhelper`, so System Settings lists it by name. Release builds ship it
 //!   pre-signed with the Developer ID inside the app (`Contents/Helpers`); other builds sign a
 //!   copy of the app's own executable when installing.
 //! * The same executable runs in two roles: as the root LaunchDaemon (`--keyhelper`) that seizes
@@ -34,19 +34,19 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-pub const LABEL: &str = "app.hushboard.keyhelper";
-pub const SOCKET: &str = "/var/run/app.hushboard.keyhelper.sock";
-pub const BUNDLE_PATH: &str = "/Library/PrivilegedHelperTools/Hushboard Keyboard Helper.app";
+pub const LABEL: &str = "app.clackboard.keyhelper";
+pub const SOCKET: &str = "/var/run/app.clackboard.keyhelper.sock";
+pub const BUNDLE_PATH: &str = "/Library/PrivilegedHelperTools/Clackboard Keyboard Helper.app";
 pub const BUNDLE_EXE: &str =
-    "/Library/PrivilegedHelperTools/Hushboard Keyboard Helper.app/Contents/MacOS/hushboard-keyhelper";
+    "/Library/PrivilegedHelperTools/Clackboard Keyboard Helper.app/Contents/MacOS/clackboard-keyhelper";
 /// Where version 1 and 2 installed a bare executable; removed on install.
-const LEGACY_PATH: &str = "/Library/PrivilegedHelperTools/app.hushboard.keyhelper";
-pub const PLIST_PATH: &str = "/Library/LaunchDaemons/app.hushboard.keyhelper.plist";
-const EMBEDDED: &str = "Helpers/Hushboard Keyboard Helper.app";
+const LEGACY_PATH: &str = "/Library/PrivilegedHelperTools/app.clackboard.keyhelper";
+pub const PLIST_PATH: &str = "/Library/LaunchDaemons/app.clackboard.keyhelper.plist";
+const EMBEDDED: &str = "Helpers/Clackboard Keyboard Helper.app";
 /// Bump when the protocol or the helper's behaviour changes; the app then asks to update it.
 /// 3: signed app bundle, prompts as the user, restarts on grant.
 /// 4: user-side access check, `restart` command, refuses to lock without Input Monitoring.
-/// 5: bundle built and signed by the app (stable "Hushboard Dev" identity when available).
+/// 5: bundle built and signed by the app (stable "Clackboard Dev" identity when available).
 /// 6: Developer ID signed helper shipped inside release builds.
 /// 7: `watch` detects cleaning from the keyboards themselves.
 pub const VERSION: u64 = 7;
@@ -75,7 +75,7 @@ pub fn main_from_args() -> Option<i32> {
         },
         "--keyhelper-request-access" => {
             // Runs as the logged-in user inside the helper bundle: macOS shows its Input
-            // Monitoring prompt and adds "Hushboard Keyboard Helper" to the list.
+            // Monitoring prompt and adds "Clackboard Keyboard Helper" to the list.
             mac_hid::request_access();
             std::thread::sleep(Duration::from_secs(2));
             0
@@ -100,7 +100,7 @@ fn report(r: Result<(), String>) -> i32 {
     match r {
         Ok(()) => 0,
         Err(e) => {
-            eprintln!("hushboard keyhelper: {e}");
+            eprintln!("clackboard keyhelper: {e}");
             1
         }
     }
@@ -141,9 +141,9 @@ fn info_plist() -> String {
 <plist version="1.0">
 <dict>
   <key>CFBundleIdentifier</key><string>{LABEL}</string>
-  <key>CFBundleName</key><string>Hushboard Keyboard Helper</string>
-  <key>CFBundleDisplayName</key><string>Hushboard Keyboard Helper</string>
-  <key>CFBundleExecutable</key><string>hushboard-keyhelper</string>
+  <key>CFBundleName</key><string>Clackboard Keyboard Helper</string>
+  <key>CFBundleDisplayName</key><string>Clackboard Keyboard Helper</string>
+  <key>CFBundleExecutable</key><string>clackboard-keyhelper</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>{VERSION}</string>
   <key>CFBundleVersion</key><string>{VERSION}</string>
@@ -221,11 +221,11 @@ fn install(src: &str, expected_digest: &str) -> Result<(), String> {
     std::thread::sleep(Duration::from_millis(300));
 
     std::fs::create_dir_all("/Library/PrivilegedHelperTools").map_err(|e| e.to_string())?;
-    let building = Path::new("/Library/PrivilegedHelperTools/.hushboard-keyhelper-build");
+    let building = Path::new("/Library/PrivilegedHelperTools/.clackboard-keyhelper-build");
     let _ = std::fs::remove_dir_all(building);
     std::fs::create_dir(building).map_err(|e| e.to_string())?;
     root_own(building, 0o700)?;
-    let bundle = building.join("Hushboard Keyboard Helper.app");
+    let bundle = building.join("Clackboard Keyboard Helper.app");
 
     let fail = |msg: String| {
         let _ = std::fs::remove_dir_all(building);
@@ -299,7 +299,7 @@ fn uninstall() -> Result<(), String> {
 
 fn run_daemon() -> i32 {
     if let Err(e) = require_root() {
-        eprintln!("hushboard keyhelper: {e}");
+        eprintln!("clackboard keyhelper: {e}");
         return 1;
     }
     // Not allowed yet? Watch for the grant and restart when it lands, so seizing starts from a
@@ -308,7 +308,7 @@ fn run_daemon() -> i32 {
         std::thread::spawn(|| loop {
             std::thread::sleep(Duration::from_secs(1));
             if mac_hid::access() == "granted" {
-                eprintln!("hushboard keyhelper: Input Monitoring granted, restarting");
+                eprintln!("clackboard keyhelper: Input Monitoring granted, restarting");
                 std::process::exit(0);
             }
         });
@@ -318,18 +318,18 @@ fn run_daemon() -> i32 {
     let listener = match UnixListener::bind(SOCKET) {
         Ok(l) => l,
         Err(e) => {
-            eprintln!("hushboard keyhelper: bind {SOCKET}: {e}");
+            eprintln!("clackboard keyhelper: bind {SOCKET}: {e}");
             return 1;
         }
     };
     // Anyone may connect; each connection is then checked against the console user.
     let _ = std::fs::set_permissions(SOCKET, std::fs::Permissions::from_mode(0o666));
-    eprintln!("hushboard keyhelper v{VERSION} listening on {SOCKET}");
+    eprintln!("clackboard keyhelper v{VERSION} listening on {SOCKET}");
 
     for stream in listener.incoming().flatten() {
         std::thread::spawn(move || {
             if let Err(e) = serve(stream) {
-                eprintln!("hushboard keyhelper: connection ended: {e}");
+                eprintln!("clackboard keyhelper: connection ended: {e}");
             }
         });
     }
@@ -423,7 +423,7 @@ fn serve(stream: UnixStream) -> std::io::Result<()> {
                     send(&writer, json!({ "ok": false, "code": "busy", "error": "the keyboard is locked" }));
                 } else {
                     send(&writer, json!({ "ok": true }));
-                    eprintln!("hushboard keyhelper: restart requested");
+                    eprintln!("clackboard keyhelper: restart requested");
                     std::thread::spawn(|| {
                         std::thread::sleep(Duration::from_millis(100));
                         std::process::exit(0);
@@ -580,7 +580,7 @@ fn connect_installed() -> Option<UnixStream> {
 fn user_side_access() -> Option<String> {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let path = std::env::temp_dir().join(format!(
-        "hushboard-access-{}-{}.txt",
+        "clackboard-access-{}-{}.txt",
         std::process::id(),
         COUNTER.fetch_add(1, Ordering::Relaxed)
     ));
@@ -844,12 +844,12 @@ fn run_as_admin(args: &[&str], prompt: &str) -> Result<(), Error> {
 }
 
 /// The signing identity for the helper bundle, in order of preference:
-/// `HUSHBOARD_SIGN_IDENTITY` (e.g. a Developer ID for releases), then a local "Hushboard Dev"
+/// `CLACKBOARD_SIGN_IDENTITY` (e.g. a Developer ID for releases), then a local "Clackboard Dev"
 /// certificate, then ad-hoc ("-"). A real certificate gives the helper a designated requirement
 /// that survives rebuilds, so macOS keeps the Input Monitoring grant across updates; ad-hoc
 /// signatures change with every build and macOS asks again.
 fn signing_identity() -> String {
-    if let Ok(id) = std::env::var("HUSHBOARD_SIGN_IDENTITY") {
+    if let Ok(id) = std::env::var("CLACKBOARD_SIGN_IDENTITY") {
         if !id.trim().is_empty() {
             return id;
         }
@@ -857,16 +857,16 @@ fn signing_identity() -> String {
     let found = std::process::Command::new("/usr/bin/security")
         .args(["find-identity", "-p", "codesigning"])
         .output()
-        .map(|o| String::from_utf8_lossy(&o.stdout).contains("\"Hushboard Dev\""))
+        .map(|o| String::from_utf8_lossy(&o.stdout).contains("\"Clackboard Dev\""))
         .unwrap_or(false);
-    if found { "Hushboard Dev".into() } else { "-".into() }
+    if found { "Clackboard Dev".into() } else { "-".into() }
 }
 
 fn write_bundle(bundle: &Path) -> std::io::Result<()> {
     let exe = std::env::current_exe()?;
     let _ = std::fs::remove_dir_all(bundle);
     std::fs::create_dir_all(bundle.join("Contents/MacOS"))?;
-    std::fs::copy(&exe, bundle.join("Contents/MacOS/hushboard-keyhelper"))?;
+    std::fs::copy(&exe, bundle.join("Contents/MacOS/clackboard-keyhelper"))?;
     std::fs::write(bundle.join("Contents/Info.plist"), info_plist())
 }
 
@@ -897,7 +897,7 @@ fn copy_bundle(src: &Path, dst: &Path) -> Result<(), String> {
 
 fn stage_bundle(staging_root: &Path) -> Result<std::path::PathBuf, Error> {
     let _ = std::fs::remove_dir_all(staging_root);
-    let bundle = staging_root.join("Hushboard Keyboard Helper.app");
+    let bundle = staging_root.join("Clackboard Keyboard Helper.app");
     let embedded = std::env::current_exe()
         .ok()
         .and_then(|exe| embedded_bundle_for(&exe))
@@ -932,12 +932,12 @@ fn build_signed_bundle(bundle: &Path) -> Result<(), Error> {
 }
 
 pub fn install_from_app() -> Result<(), Error> {
-    let staging_root = std::env::temp_dir().join(format!("hushboard-keyhelper-{}", std::process::id()));
+    let staging_root = std::env::temp_dir().join(format!("clackboard-keyhelper-{}", std::process::id()));
     let result = stage_bundle(&staging_root).and_then(|bundle| {
         let digest = bundle_digest(&bundle).map_err(Error::Os)?;
         run_as_admin(
             &["--keyhelper-install", &bundle.to_string_lossy(), &digest],
-            "Hushboard wants to install its keyboard helper so it can lock the keyboard hardware.",
+            "Clackboard wants to install its keyboard helper so it can lock the keyboard hardware.",
         )
     });
     let _ = std::fs::remove_dir_all(&staging_root);
@@ -956,7 +956,7 @@ pub fn install_from_app() -> Result<(), Error> {
 }
 
 /// Launch the helper bundle as the logged-in user to ask for Input Monitoring. macOS then shows
-/// its own prompt ("Hushboard Keyboard Helper would like to receive keystrokes…") and lists the
+/// its own prompt ("Clackboard Keyboard Helper would like to receive keystrokes…") and lists the
 /// helper in System Settings, ready to switch on.
 pub fn request_access_from_app() {
     let _ = std::process::Command::new("/usr/bin/open")
@@ -965,7 +965,7 @@ pub fn request_access_from_app() {
 }
 
 pub fn uninstall_from_app() -> Result<(), Error> {
-    run_as_admin(&["--keyhelper-uninstall"], "Hushboard wants to remove its keyboard helper.")
+    run_as_admin(&["--keyhelper-uninstall"], "Clackboard wants to remove its keyboard helper.")
 }
 
 pub fn open_input_monitoring() {
@@ -988,9 +988,9 @@ mod tests {
     #[test]
     fn finds_the_embedded_helper_next_to_the_app_executable() {
         let root = scratch("embedded");
-        let contents = root.join("Hushboard.app/Contents");
+        let contents = root.join("Clackboard.app/Contents");
         std::fs::create_dir_all(contents.join("MacOS")).unwrap();
-        let exe = contents.join("MacOS/hushboard");
+        let exe = contents.join("MacOS/clackboard");
         assert_eq!(embedded_bundle_for(&exe), None);
 
         std::fs::create_dir_all(contents.join(EMBEDDED)).unwrap();
@@ -1006,14 +1006,14 @@ mod tests {
         std::fs::create_dir_all(src.join("Contents/_CodeSignature")).unwrap();
         std::fs::write(src.join("Contents/Info.plist"), info_plist()).unwrap();
         std::fs::write(src.join("Contents/_CodeSignature/CodeResources"), "seal").unwrap();
-        let exe = src.join("Contents/MacOS/hushboard-keyhelper");
+        let exe = src.join("Contents/MacOS/clackboard-keyhelper");
         std::fs::write(&exe, "binary").unwrap();
         std::fs::set_permissions(&exe, std::fs::Permissions::from_mode(0o755)).unwrap();
 
         let dst = root.join("dst.app");
         copy_bundle(&src, &dst).unwrap();
         assert_eq!(bundle_digest(&src).unwrap(), bundle_digest(&dst).unwrap());
-        let mode = std::fs::metadata(dst.join("Contents/MacOS/hushboard-keyhelper")).unwrap().permissions().mode();
+        let mode = std::fs::metadata(dst.join("Contents/MacOS/clackboard-keyhelper")).unwrap().permissions().mode();
         assert_eq!(mode & 0o111, 0o111);
         let _ = std::fs::remove_dir_all(root);
     }
@@ -1067,9 +1067,9 @@ mod tests {
     #[test]
     fn ad_hoc_bundles_are_not_treated_as_developer_signed() {
         let root = scratch("adhoc");
-        let bundle = root.join("Hushboard Keyboard Helper.app");
+        let bundle = root.join("Clackboard Keyboard Helper.app");
         std::fs::create_dir_all(bundle.join("Contents/MacOS")).unwrap();
-        std::fs::copy("/usr/bin/true", bundle.join("Contents/MacOS/hushboard-keyhelper")).unwrap();
+        std::fs::copy("/usr/bin/true", bundle.join("Contents/MacOS/clackboard-keyhelper")).unwrap();
         std::fs::write(bundle.join("Contents/Info.plist"), info_plist()).unwrap();
         let signed = std::process::Command::new("/usr/bin/codesign")
             .args(["--force", "--sign", "-", "--identifier", LABEL])

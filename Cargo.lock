@@ -433,6 +433,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "clackboard"
+version = "1.0.0"
+dependencies = [
+ "keylock",
+ "objc2",
+ "objc2-foundation",
+ "rodio",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-autostart",
+ "tauri-plugin-updater",
+]
+
+[[package]]
 name = "clang-sys"
 version = "1.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1540,22 +1556,6 @@ name = "httparse"
 version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87"
-
-[[package]]
-name = "hushboard"
-version = "1.0.0"
-dependencies = [
- "keylock",
- "objc2",
- "objc2-foundation",
- "rodio",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-autostart",
- "tauri-plugin-updater",
-]
 
 [[package]]
 name = "hyper"

@@ -46,7 +46,7 @@
       "minimumSystemVersion": "11.0",
       "signingIdentity": "-",
       "files": {
-        "Helpers/Hushboard Keyboard Helper.app": "../target/mac-helper/Hushboard Keyboard Helper.app"
+        "Helpers/Clackboard Keyboard Helper.app": "../target/mac-helper/Clackboard Keyboard Helper.app"
       },
       "dmg": {
         "windowSize": {
