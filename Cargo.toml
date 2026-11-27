@@ -1,3 +1,3 @@
 [workspace]
 resolver = "2"
-members = ["src-tauri", "crates/keylock", "tools/site-packs"]
+members = ["src-tauri", "crates/keylock", "tools/site-packs", "tools/pack-import"]

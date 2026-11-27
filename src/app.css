@@ -530,17 +530,7 @@ html[data-shell="panel"] .hb-btn--attention:hover { background: color-mix(in srg
 /* ---------- Sounds ---------- */
 .app__sounds { display: grid; gap: var(--space-3); }
 .app__packs { max-height: 280px; overflow-y: auto; }
-.app__pack { grid-template-columns: 14px 1fr 22px; }
-.app__pack-dot { width: 10px; height: 10px; border-radius: 50%; margin-left: 2px; background: var(--line-strong); }
-.app__pack[data-kind="clicky"] .app__pack-dot { background: #5aa9ff; }
-.app__pack[data-kind="tactile"] .app__pack-dot { background: #c9a2ff; }
-.app__pack[data-kind="linear"] .app__pack-dot { background: #ff8a8a; }
-.app__pack[data-kind="topre"] .app__pack-dot { background: #ffd36e; }
-.app__pack-check { width: 20px; height: 20px; color: var(--seal); }
-.app__pack-check svg { width: 20px; height: 20px; }
-.app__packs .app__pack[aria-checked="true"] { background: var(--suds); box-shadow: inset 3px 0 0 var(--seal); }
-.app__packs .app__pack[aria-checked="true"] .hb-device__name { color: var(--on-suds); }
-.app__packs .app__pack:hover:not([aria-checked="true"]) { background: var(--material-fill); }
+.app__packs .hb-device[aria-checked="true"] { background: var(--suds); }
 
 /* A group of sections: "Keyboard cleaning" sets the lock apart from the sounds above it. */
 .app__group { display: grid; gap: var(--space-1, 4px); padding-top: var(--space-3); border-top: 1px solid var(--line); }

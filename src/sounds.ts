@@ -17,20 +17,6 @@ const TOGGLES: { key: "release" | "stereo" | "varyPitch"; label: string; icon: I
   { key: "varyPitch", label: "Vary the pitch a little", icon: "sparkles" },
 ];
 
-type Kind = "clicky" | "tactile" | "linear" | "topre";
-const KIND_LABEL: Record<Kind, string> = { clicky: "Clicky", tactile: "Tactile", linear: "Linear", topre: "Topre" };
-const CHECK = `<svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-
-/** What a switch feels like, from its name (colours match the website). Unknown packs get none. */
-function switchKind(name: string): Kind | null {
-  const n = name.toLowerCase();
-  if (n.includes("topre")) return "topre";
-  if (/\bblue\b|clicky|box jade|box navy|green/.test(n)) return "clicky";
-  if (/brown|oreo|purple|holy panda|tactile|zealio|boba/.test(n)) return "tactile";
-  if (/black|\bred\b|linear|yellow|cream|alpaca|silver|speed/.test(n)) return "linear";
-  return null;
-}
-
 /** "CherryMX Blue - ABS keycaps" → "CherryMX Blue" + "ABS keycaps". */
 function split(name: string): [string, string] {
   const i = name.indexOf(" - ");
@@ -69,12 +55,11 @@ function render() {
           .map((k) => {
             const on = k.id === p.pack;
             const [t, s] = split(k.name);
-            const kind = switchKind(k.name);
-            const meta = [kind ? KIND_LABEL[kind] : "", s, k.builtin ? "" : "your pack"].filter(Boolean).join(" · ");
-            return `<button class="hb-device app__pack" type="button" role="radio" aria-checked="${on}" data-pack="${escapeHtml(k.id)}" ${kind ? `data-kind="${kind}"` : ""}>
-              <span class="app__pack-dot" aria-hidden="true"></span>
+            const meta = [s, k.hasRelease ? "press and release" : "press", k.builtin ? "" : "your pack"].filter(Boolean).join(" · ");
+            return `<button class="hb-device" type="button" role="radio" aria-checked="${on}" data-pack="${escapeHtml(k.id)}">
+              <span class="hb-device__icon">${icon("keyboard")}</span>
               <span><span class="hb-device__name">${escapeHtml(t)}</span><br><span class="hb-device__meta">${escapeHtml(meta)}</span></span>
-              <span class="app__pack-check" aria-hidden="true">${on ? CHECK : ""}</span></button>`;
+              <span></span></button>`;
           })
           .join("")}
       </div>
@@ -95,7 +80,14 @@ function render() {
         <button class="hb-btn hb-btn--primary" type="button" id="snd-allow">Open Input Monitoring</button>
       </div>`;
   }
+  // Redrawing replaces the switch list, so keep where it (and the panel) was scrolled to.
+  const listScroll = document.getElementById("snd-packs")?.scrollTop ?? 0;
+  const body = box.closest<HTMLElement>(".app__body");
+  const bodyScroll = body?.scrollTop ?? 0;
   box.innerHTML = html;
+  const list = document.getElementById("snd-packs");
+  if (list) list.scrollTop = listScroll;
+  if (body) body.scrollTop = bodyScroll;
 
   if (info.error) {
     note.textContent = info.error;
@@ -145,8 +137,21 @@ export async function initSounds() {
       return;
     }
     const pack = t.closest<HTMLButtonElement>("button[data-pack]");
-    if (pack) {
-      update({ pack: pack.dataset.pack! });
+    if (pack && info) {
+      // Mark the choice in place (no redraw), so the list stays exactly where it is.
+      const id = pack.dataset.pack!;
+      for (const b of box.querySelectorAll<HTMLButtonElement>("button[data-pack]")) {
+        b.setAttribute("aria-checked", String(b.dataset.pack === id));
+      }
+      const chosen = info.packs.find((k) => k.id === id);
+      if (chosen) {
+        const [title, sub] = split(chosen.name);
+        const t = box.querySelector(".app__disclosure-title");
+        const m = box.querySelector(".app__disclosure-meta");
+        if (t) t.textContent = title;
+        if (m) m.textContent = `${sub || "Switch"} · ${info.packs.length} switches`;
+      }
+      update({ pack: id }, false);
       // Let people hear the switch they just picked.
       void saving.then(() => api.soundDemo());
       return;

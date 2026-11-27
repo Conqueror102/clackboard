@@ -75,15 +75,20 @@ fn convert(src_root: &Path, out_root: &Path, id: &str) {
     let mut out: Vec<f32> = Vec::new();
     let mut keys = Map::new();
     let gap = vec![0.0; (GAP_MS / 1000.0 * RATE as f64) as usize];
+    // Packs often share one recording between many keys: store each clip once.
+    let mut seen: std::collections::HashMap<(u64, u64), (f64, f64)> = std::collections::HashMap::new();
     for (code, def) in defs {
         let mut segs = Vec::new();
         for pair in def["timing"].as_array().into_iter().flatten() {
             let (Some(a), Some(b)) = (pair[0].as_f64(), pair[1].as_f64()) else { continue };
-            let clip = slice(&src, src_rate, a, b);
-            let start = out.len() as f64 * 1000.0 / RATE as f64;
-            out.extend_from_slice(&clip);
-            let end = out.len() as f64 * 1000.0 / RATE as f64;
-            out.extend_from_slice(&gap);
+            let (start, end) = *seen.entry((a.to_bits(), b.to_bits())).or_insert_with(|| {
+                let clip = slice(&src, src_rate, a, b);
+                let start = out.len() as f64 * 1000.0 / RATE as f64;
+                out.extend_from_slice(&clip);
+                let end = out.len() as f64 * 1000.0 / RATE as f64;
+                out.extend_from_slice(&gap);
+                (start, end)
+            });
             segs.push(json!([(start * 10.0).round() / 10.0, (end * 10.0).round() / 10.0]));
         }
         if !segs.is_empty() {

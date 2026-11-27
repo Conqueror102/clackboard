@@ -6,7 +6,7 @@ All notable changes to Hushboard are recorded here. The format follows [Keep a C
 
 Clackboard is a fork of Hushboard that adds mechanical keyboard sounds.
 
-- A real switch sound on every key press and release, from Mechvibes packs (11 switches built in; add your own).
+- A real switch sound on every key press and release: 26 switches built in, from Mechvibes, kbsim, Keyboard Sounds and bucklespring (IBM Model M); add your own Mechvibes packs.
 - Stereo by key position, a little random pitch, volume, and a typing demo.
 - Windows, Linux and macOS (macOS asks for Input Monitoring once).
 - Detect cleaning now works on Windows and Linux, and reacts faster everywhere.

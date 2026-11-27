@@ -6,9 +6,12 @@
 const SWITCHES = [
   { id: "eg-oreo", name: "EG Oreo", kind: "tactile" },
   { id: "cherrymx-blue-abs", name: "MX Blue", kind: "clicky" },
+  { id: "ibm-model-m", name: "Model M", kind: "clicky" },
+  { id: "holy-panda", name: "Holy Panda", kind: "tactile" },
+  { id: "nk-cream", name: "NK Cream", kind: "linear" },
   { id: "cherrymx-red-abs", name: "MX Red", kind: "linear" },
   { id: "topre-purple-hybrid-pbt", name: "Topre", kind: "topre" },
-  { id: "eg-crystal-purple", name: "Crystal Purple", kind: "tactile" },
+  { id: "typewriter", name: "Typewriter", kind: "clicky" },
 ];
 const KIND_COLOR = { clicky: "var(--clicky)", tactile: "var(--tactile)", linear: "var(--linear)", topre: "var(--topre)" };
 

@@ -7,7 +7,7 @@
 ## Sounds
 
 - **A sound on every press and release.** Each key has its own recorded sound, so the space bar thocks and the letters click.
-- **11 switches built in:** Cherry MX Black, Blue, Brown and Red (ABS and PBT keycaps), EG Oreo, EG Oreo Classic, EG Crystal Purple and Topre Purple Hybrid. Press **Play a typing demo** to hear one.
+- **26 switches built in:** clicky (Cherry MX Blue, IBM Model M, a typewriter), tactile (Cherry MX Brown, Holy Panda, EG Oreo, EG Crystal Purple, Logitech G915), linear (Cherry MX Black, Red and Speed Silver, Gateron Ink, NovelKeys Cream, Telios V2, Banana Split, Alpaca, SteelSeries Apex Pro) and Topre. Press **Play a typing demo** to hear one.
 - **Like a real desk:** keys on the left sound on the left, keys on the right on the right, with a touch of random pitch so no two presses sound quite the same.
 - **Add your own:** any [Mechvibes](https://github.com/hainguyents13/mechvibes) sound pack works, old or new format. Press **Add your own…** and drop the pack's folder in.
 - **Hears keys, not words.** Clackboard only learns which key position went down, never what you type. Nothing is recorded or sent anywhere. On macOS it is silent while you type a password.
