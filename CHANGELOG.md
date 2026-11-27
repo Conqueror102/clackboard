@@ -1,12 +1,28 @@
 # Changelog
 
-All notable changes to Hushboard are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
+All notable changes to Clackboard (and, below, Hushboard before it) are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
+
+## Clackboard 0.2.0
+
+### Added
+
+- 15 more switches, 26 in all: IBM Model M (every key recorded separately), Holy Panda, Alpaca, Gateron Black Ink and Red Ink, NovelKeys Cream, Telios V2, Cherry MX Speed Silver, Banana Split, SteelSeries Apex Pro TKL, Logitech G915 TKL, a typewriter, and second recordings of Cherry MX Black, Blue and Brown. Each pack carries its own license; see CREDITS.md.
+- A new look: graphite with an electric mint accent, and a keycap logo on every icon.
+- A website with a live typing demo and direct downloads for every system.
+
+### Changed
+
+- Detect cleaning reacts faster: it locks 0.6 s after a wipe and listens again 3 s after an unlock.
+
+### Fixed
+
+- Picking a switch no longer scrolls the list back to the top.
 
 ## Clackboard 0.1.0
 
 Clackboard is a fork of Hushboard that adds mechanical keyboard sounds.
 
-- A real switch sound on every key press and release: 26 switches built in, from Mechvibes, kbsim, Keyboard Sounds and bucklespring (IBM Model M); add your own Mechvibes packs.
+- A real switch sound on every key press and release, from Mechvibes packs (11 switches built in; add your own).
 - Stereo by key position, a little random pitch, volume, and a typing demo.
 - Windows, Linux and macOS (macOS asks for Input Monitoring once).
 - Detect cleaning now works on Windows and Linux, and reacts faster everywhere.
