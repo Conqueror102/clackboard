@@ -17,6 +17,20 @@ const TOGGLES: { key: "release" | "stereo" | "varyPitch"; label: string; icon: I
   { key: "varyPitch", label: "Vary the pitch a little", icon: "sparkles" },
 ];
 
+type Kind = "clicky" | "tactile" | "linear" | "topre";
+const KIND_LABEL: Record<Kind, string> = { clicky: "Clicky", tactile: "Tactile", linear: "Linear", topre: "Topre" };
+const CHECK = `<svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+/** What a switch feels like, from its name (colours match the website). Unknown packs get none. */
+function switchKind(name: string): Kind | null {
+  const n = name.toLowerCase();
+  if (n.includes("topre")) return "topre";
+  if (/\bblue\b|clicky|box jade|box navy|green/.test(n)) return "clicky";
+  if (/brown|oreo|purple|holy panda|tactile|zealio|boba/.test(n)) return "tactile";
+  if (/black|\bred\b|linear|yellow|cream|alpaca|silver|speed/.test(n)) return "linear";
+  return null;
+}
+
 /** "CherryMX Blue - ABS keycaps" → "CherryMX Blue" + "ABS keycaps". */
 function split(name: string): [string, string] {
   const i = name.indexOf(" - ");
@@ -55,11 +69,12 @@ function render() {
           .map((k) => {
             const on = k.id === p.pack;
             const [t, s] = split(k.name);
-            const meta = [s, k.hasRelease ? "press and release" : "press", k.builtin ? "" : "your pack"].filter(Boolean).join(" · ");
-            return `<button class="hb-device" type="button" role="radio" aria-checked="${on}" data-pack="${escapeHtml(k.id)}">
-              <span class="hb-device__icon">${icon("keyboard")}</span>
+            const kind = switchKind(k.name);
+            const meta = [kind ? KIND_LABEL[kind] : "", s, k.builtin ? "" : "your pack"].filter(Boolean).join(" · ");
+            return `<button class="hb-device app__pack" type="button" role="radio" aria-checked="${on}" data-pack="${escapeHtml(k.id)}" ${kind ? `data-kind="${kind}"` : ""}>
+              <span class="app__pack-dot" aria-hidden="true"></span>
               <span><span class="hb-device__name">${escapeHtml(t)}</span><br><span class="hb-device__meta">${escapeHtml(meta)}</span></span>
-              <span></span></button>`;
+              <span class="app__pack-check" aria-hidden="true">${on ? CHECK : ""}</span></button>`;
           })
           .join("")}
       </div>
