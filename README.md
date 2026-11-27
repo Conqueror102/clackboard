@@ -2,7 +2,7 @@
 
 **Type like it's mechanical.** Clackboard plays a real mechanical switch sound for every key you press and release, on macOS, Windows and Linux. It can also lock your keyboard while you wipe it clean.
 
-Free and open source (MIT) · [Install guide](docs/installing.md) · [What's new](CHANGELOG.md) · [Credits](CREDITS.md)
+**[Website and live demo](https://conqueror102.github.io/clackboard/)** · Free and open source (MIT) · [Install guide](docs/installing.md) · [What's new](CHANGELOG.md) · [Credits](CREDITS.md)
 
 ## Sounds
 

@@ -291,10 +291,10 @@ html[data-material="native"] .hb-seg button[aria-checked="true"] { background: v
 html[data-material="native"] body { position: relative; display: flow-root; }
 html[data-material="native"][data-caret="top"] .app { margin-top: 16px; }
 /* Browser preview (?material=native): fake the frost so the layout can be checked. */
-html[data-material-preview] { background: linear-gradient(135deg, #5b6e8f, #9a7b6a); min-height: 100%; }
-html[data-material-preview] .app { background: rgba(246, 243, 238, 0.72); backdrop-filter: blur(30px) saturate(1.6); }
+html[data-material-preview] { background: linear-gradient(135deg, #1d4a5a, #2c6b57); min-height: 100%; }
+html[data-material-preview] .app { background: rgba(243, 246, 245, 0.72); backdrop-filter: blur(30px) saturate(1.6); }
 @media (prefers-color-scheme: dark) {
-  html[data-material-preview] .app { background: rgba(40, 36, 33, 0.72); }
+  html[data-material-preview] .app { background: rgba(23, 28, 31, 0.72); }
 }
 
 /* Opening and closing. The panel grows from the pointer (or, on Windows, from the taskbar below)
@@ -388,10 +388,10 @@ html:not([data-platform="macos"]) .island {
 }
 
 /* Windows: a floating pill (the window leaves 8–10 px for its shadow). */
-html[data-platform="windows"] { --island-bg: #1f1a16; --island-radius: var(--island-r, 24px); --ring: 44px; }
+html[data-platform="windows"] { --island-bg: #111518; --island-radius: var(--island-r, 24px); --ring: 44px; }
 html[data-platform="windows"] .island { padding: 8px 10px 16px; box-sizing: border-box; }
 html[data-platform="windows"] .island__bar,
-html[data-platform="windows"] .island__locked { border: 1px solid #3a322b; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45); }
+html[data-platform="windows"] .island__locked { border: 1px solid #2a3337; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45); }
 html[data-platform="windows"] .island__locked { grid-template-columns: auto 1fr auto; grid-template-rows: auto; padding: 0 8px 0 10px; }
 html[data-platform="windows"] .island__ring { grid-row: auto; }
 html[data-platform="windows"] .island__info { align-self: center; gap: 0; }
