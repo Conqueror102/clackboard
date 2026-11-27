@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Hushboard",
+  "productName": "Clackboard",
   "version": "../package.json",
-  "identifier": "app.hushboard.desktop",
+  "identifier": "app.clackboard.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -19,15 +19,22 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["app", "dmg", "nsis", "appimage", "deb", "rpm"],
-    "createUpdaterArtifacts": true,
-    "publisher": "Tekcify",
-    "copyright": "© 2026 Tekcify and the Hushboard contributors. MIT License.",
+    "targets": [
+      "app",
+      "dmg",
+      "nsis",
+      "appimage",
+      "deb",
+      "rpm"
+    ],
+    "createUpdaterArtifacts": false,
+    "publisher": "Clackboard",
+    "copyright": "© 2026 the Clackboard contributors. Based on Hushboard © Tekcify. MIT License.",
     "homepage": "https://github.com/tekcify/hushboard",
     "license": "MIT",
     "category": "Utility",
-    "shortDescription": "Lock the keyboard while you clean it.",
-    "longDescription": "Hushboard locks your keyboard for a set time so you can wipe it clean without typing into whatever is open. The mouse and trackpad keep working, and you can always unlock by holding the on-screen button or pressing Ctrl + Alt + U.",
+    "shortDescription": "Mechanical keyboard sounds, and a keyboard lock for cleaning.",
+    "longDescription": "Clackboard plays a real mechanical switch sound for every key you press, using Mechvibes sound packs, and can lock the keyboard while you wipe it clean. Built on Hushboard.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -42,7 +49,10 @@
         "Helpers/Hushboard Keyboard Helper.app": "../target/mac-helper/Hushboard Keyboard Helper.app"
       },
       "dmg": {
-        "windowSize": { "width": 600, "height": 380 }
+        "windowSize": {
+          "width": 600,
+          "height": 380
+        }
       }
     },
     "windows": {
@@ -50,22 +60,35 @@
         "installMode": "currentUser",
         "displayLanguageSelector": false
       },
-      "webviewInstallMode": { "type": "downloadBootstrapper" }
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
     },
     "linux": {
       "deb": {
-        "depends": ["libayatana-appindicator3-1"]
+        "depends": [
+          "libayatana-appindicator3-1"
+        ]
       },
       "rpm": {
-        "depends": ["libayatana-appindicator-gtk3"]
+        "depends": [
+          "libayatana-appindicator-gtk3"
+        ]
       }
+    },
+    "resources": {
+      "resources/packs/": "resources/packs/"
     }
   },
   "plugins": {
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ0MDU1RjkzRjMxMjBEQUYKUldTdkRSTHprMThGMU05U3U2RkRlNkR2bXRYcEhRMkV5akJOWmdJQXBiTDNva1VnUnVtTDM3cHMK",
-      "endpoints": ["https://github.com/tekcify/hushboard/releases/download/updater/latest.json"],
-      "windows": { "installMode": "passive" }
+      "endpoints": [
+        "https://github.com/tekcify/hushboard/releases/download/updater/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

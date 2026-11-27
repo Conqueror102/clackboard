@@ -67,16 +67,16 @@ pub fn create_tray(app: &AppHandle) -> tauri::Result<()> {
             &MenuItem::with_id(app, "lock-300", "Lock for 5 minutes", true, None::<&str>)?,
             &MenuItem::with_id(app, "lock-forever", "Lock until I unlock", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "open", "Open Hushboard…", true, None::<&str>)?,
+            &MenuItem::with_id(app, "open", "Open Clackboard…", true, None::<&str>)?,
             &MenuItem::with_id(app, "welcome", "Welcome tour…", true, None::<&str>)?,
-            &MenuItem::with_id(app, "quit", "Quit Hushboard", true, None::<&str>)?,
+            &MenuItem::with_id(app, "quit", "Quit Clackboard", true, None::<&str>)?,
         ],
     )?;
 
     TrayIconBuilder::with_id(TRAY_ID)
         .icon(tray_image(false))
         .icon_as_template(cfg!(target_os = "macos"))
-        .tooltip("Hushboard: keyboard unlocked")
+        .tooltip("Clackboard: keyboard unlocked")
         .menu(&menu)
         // Left click opens the panel; the menu is on right click (on Linux, any click).
         .show_menu_on_left_click(!uses_panel())
@@ -115,9 +115,9 @@ pub fn set_tray_phase(app: &AppHandle, phase: Phase) {
         let _ = tray.set_icon(Some(tray_image(locked)));
         let _ = tray.set_icon_as_template(cfg!(target_os = "macos"));
         let _ = tray.set_tooltip(Some(match phase {
-            Phase::Idle => "Hushboard: keyboard unlocked",
-            Phase::Arming => "Hushboard: locking…",
-            Phase::Locked => "Hushboard: keyboard locked",
+            Phase::Idle => "Clackboard: keyboard unlocked",
+            Phase::Arming => "Clackboard: locking…",
+            Phase::Locked => "Clackboard: keyboard locked",
         }));
     }
 }
@@ -129,7 +129,7 @@ pub fn set_tray_phase(app: &AppHandle, phase: Phase) {
 pub fn create_main_window(app: &AppHandle) -> tauri::Result<()> {
     if uses_panel() {
         let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
-            .title("Hushboard")
+            .title("Clackboard")
             // On macOS the panel sits on the system's frosted popover material (mac::shape_panel),
             // so the page draws no card background of its own.
             .initialization_script(if cfg!(target_os = "macos") {
@@ -162,7 +162,7 @@ pub fn create_main_window(app: &AppHandle) -> tauri::Result<()> {
         });
     } else {
         WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
-            .title("Hushboard")
+            .title("Clackboard")
             .initialization_script("window.__HB_SHELL = 'window';")
             .inner_size(420.0, 640.0)
             .min_inner_size(380.0, 520.0)
@@ -412,7 +412,7 @@ pub fn show_welcome(app: &AppHandle) -> tauri::Result<()> {
         .unwrap_or(false);
     let background = if dark { tauri::window::Color(21, 18, 15, 255) } else { tauri::window::Color(247, 243, 237, 255) };
     let builder = WebviewWindowBuilder::new(app, "welcome", WebviewUrl::App("welcome.html".into()))
-        .title("Welcome to Hushboard")
+        .title("Welcome to Clackboard")
         .inner_size(520.0, 680.0)
         .resizable(false)
         .maximizable(false)
@@ -655,7 +655,7 @@ pub fn show_islands(app: &AppHandle, state: IslandState) {
                     prefs
                 );
                 let built = WebviewWindowBuilder::new(app, &label, WebviewUrl::App("island.html".into()))
-                    .title("Hushboard")
+                    .title("Clackboard")
                     .initialization_script(&script)
                     .inner_size(w, h)
                     .decorations(false)

@@ -148,3 +148,68 @@ pub fn engage(options: &Options, sink: Sink) -> Result<Lock, Error> {
 
     Ok(Lock { stop, threads })
 }
+
+// ---------- Listening: read every keyboard without grabbing it ----------
+
+pub struct Listener {
+    stop: Arc<AtomicBool>,
+    threads: Vec<JoinHandle<()>>,
+}
+
+impl Listener {
+    pub fn stop(&mut self) {
+        self.stop.store(true, Ordering::SeqCst);
+        let me = std::thread::current().id();
+        for t in self.threads.drain(..) {
+            if t.thread().id() != me {
+                let _ = t.join();
+            }
+        }
+    }
+}
+
+pub fn listen(sink: crate::KeySink) -> Result<Listener, Error> {
+    if permissions().input_devices == Status::Denied {
+        return Err(Error::PermissionDenied("no read access to /dev/input".into()));
+    }
+    let devices: Vec<Device> = evdev::enumerate().filter(|(_, d)| is_keyboard(d)).map(|(_, d)| d).collect();
+    if devices.is_empty() {
+        return Err(Error::NoKeyboards);
+    }
+    let stop = Arc::new(AtomicBool::new(false));
+    let threads = devices
+        .into_iter()
+        .map(|mut dev| {
+            unsafe {
+                let fd = dev.as_raw_fd();
+                let flags = libc::fcntl(fd, libc::F_GETFL);
+                libc::fcntl(fd, libc::F_SETFL, flags | libc::O_NONBLOCK);
+            }
+            let stop = stop.clone();
+            let sink = sink.clone();
+            std::thread::spawn(move || {
+                while !stop.load(Ordering::SeqCst) {
+                    match dev.fetch_events() {
+                        Ok(events) => {
+                            for ev in events {
+                                // 1 = press, 0 = release, 2 = auto-repeat (ignored).
+                                if let InputEventKind::Key(key) = ev.kind() {
+                                    if ev.value() == 2 {
+                                        continue;
+                                    }
+                                    let code = crate::keycode::from_evdev(key.code()).unwrap_or("Unidentified");
+                                    sink(crate::KeyEvent { code, down: ev.value() == 1 });
+                                }
+                            }
+                        }
+                        Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                            std::thread::sleep(Duration::from_millis(4));
+                        }
+                        Err(_) => break, // device unplugged
+                    }
+                }
+            })
+        })
+        .collect();
+    Ok(Listener { stop, threads })
+}

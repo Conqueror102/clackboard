@@ -1,4 +1,5 @@
 import "./styles";
+import { initSounds } from "./sounds";
 import { api, escapeKeys, type DetectInfo, type IslandPrefs, type Keyboard, type LockState, type Permissions, type SystemState, type UpdateInfo } from "./api";
 import { markSvg } from "./brand";
 import { icon, type IconName } from "./icons";
@@ -360,7 +361,7 @@ function renderDetect() {
   const note = $("detect-note");
   const blocked = detect.enabled && detect.needsPermission;
   const label = blocked
-    ? `<span class="app__setting-text"><span>Detect cleaning</span><span class="app__setting-flag">Needs Input Monitoring</span></span>`
+    ? `<span class="app__setting-text"><span>Detect cleaning</span><span class="app__setting-flag">${perms?.platform === "linux" ? "Needs keyboard access" : "Needs Input Monitoring"}</span></span>`
     : `<span>Detect cleaning</span>`;
   row.innerHTML = `<label class="app__setting" for="set-detect">${icon("brush-cleaning")}${label}
       <button class="hb-switch" id="set-detect" type="button" role="switch" aria-checked="${detect.enabled}" ${detect.supported ? "" : "disabled"}></button></label>`;
@@ -372,7 +373,7 @@ function renderDetect() {
   } else if (blocked) {
     note.textContent = "";
   } else if (detect.enabled) {
-    note.textContent = `Wiping the keys locks them for ${length}. Hushboard never records what you type.`;
+    note.textContent = `Wiping the keys locks them for ${length}. Clackboard never records what you type.`;
   } else {
     note.textContent = "Locks on its own when many keys are pressed at once, like a cloth wiping across them.";
   }
@@ -398,7 +399,7 @@ function renderNotices() {
       <span class="hb-perm__icon">${icon("alert-02")}</span>
       <div class="hb-perm__body">
         <div class="hb-perm__title">Detect cleaning needs access <span class="hb-pill hb-pill--attention">Action needed</span></div>
-        <p class="hb-perm__text">Switch on <b>Hushboard</b> in Privacy &amp; Security → Input Monitoring so it can notice a cloth across the keys. Only the timing is counted.</p>
+        <p class="hb-perm__text">Switch on <b>Clackboard</b> in Privacy &amp; Security → Input Monitoring so it can notice a cloth across the keys. Only the timing is counted.</p>
         <div class="hb-row">
           <button class="hb-btn hb-btn--attention" type="button" data-notice="detect-settings">Open Input Monitoring</button>
           <button class="hb-btn hb-btn--ghost" type="button" data-notice="detect-off">Turn off</button>
@@ -410,7 +411,7 @@ function renderNotices() {
       <span class="hb-perm__icon">${icon("alert-02")}</span>
       <div class="hb-perm__body">
         <div class="hb-perm__title">Menu bar icon is hidden</div>
-        <p class="hb-perm__text">Your menu bar is full, so the Hushboard icon sits behind the camera notch. Make room by ${kbd(["⌘"])}-dragging other icons out of the menu bar, or open Hushboard from Spotlight anytime.</p>
+        <p class="hb-perm__text">Your menu bar is full, so the Clackboard icon sits behind the camera notch. Make room by ${kbd(["⌘"])}-dragging other icons out of the menu bar, or open Clackboard from Spotlight anytime.</p>
         <div class="hb-row"><button class="hb-btn hb-btn--secondary" type="button" data-notice="icon-ok">Got it</button></div>
       </div></div>`);
   }
@@ -497,7 +498,7 @@ function renderUpdate(update: UpdateInfo | null, message?: string) {
 async function checkForUpdatesNow() {
   try {
     const update = await api.checkForUpdate();
-    renderUpdate(update, update ? undefined : "Hushboard is up to date.");
+    renderUpdate(update, update ? undefined : "Clackboard is up to date.");
   } catch (err) {
     renderUpdate(null, `Couldn't check for updates. ${String(err)}`);
   }
@@ -525,9 +526,9 @@ function permissionCards(p: Permissions): string {
   if (p.platform === "macos" && p.helper !== "ready") {
     const open = `<button class="hb-btn hb-btn--primary" type="button" data-action="request">Open Settings</button>`;
     if (p.accessibility === "denied")
-      cards.push(card("Accessibility", "Lets Hushboard block key presses. Privacy &amp; Security → Accessibility.", false, open));
+      cards.push(card("Accessibility", "Lets Clackboard block key presses. Privacy &amp; Security → Accessibility.", false, open));
     if (p.inputMonitoring === "denied")
-      cards.push(card("Input Monitoring", "Lets Hushboard see key presses to drop them. Nothing is recorded.", false, open));
+      cards.push(card("Input Monitoring", "Lets Clackboard see key presses to drop them. Nothing is recorded.", false, open));
   }
   if (p.platform === "linux" && p.inputDevices === "denied") {
     cards.push(
@@ -560,7 +561,7 @@ function helperCard(p: Permissions): string {
       return body(
         "Action needed",
         "hb-pill--attention",
-        "Switch on <b>Hushboard Keyboard Helper</b> in Input Monitoring. Hushboard notices on its own.",
+        "Switch on <b>Hushboard Keyboard Helper</b> in Input Monitoring. Clackboard notices on its own.",
         `<button class="hb-btn hb-btn--attention" type="button" data-action="helper-settings">Open Input Monitoring</button>
          <button class="hb-btn hb-btn--ghost" type="button" data-action="helper-prompt">Ask again</button>`,
       );
@@ -568,7 +569,7 @@ function helperCard(p: Permissions): string {
       return body(
         "Update needed",
         "hb-pill--attention",
-        "This helper is from an older Hushboard. Updating asks for your password.",
+        "This helper is from an older Clackboard. Updating asks for your password.",
         `<button class="hb-btn hb-btn--attention" type="button" data-action="install-helper">Update helper</button>`,
       );
     default:
@@ -751,7 +752,7 @@ function renderFooter() {
   } else {
     const escape = escapeKeys(perms?.platform ?? "macos").join(perms?.platform === "macos" ? "" : " + ");
     footer.innerHTML = `<button class="hb-btn hb-btn--primary hb-btn--lg" type="button" id="lock" ${canLock ? "" : `disabled aria-describedby="lock-why"`}>
-      ${icon("square-lock-02")}Lock keyboard</button>
+      ${icon("square-lock-02")}Lock keyboard to clean</button>
       ${
         canLock
           ? `<p class="caption">Locks after ${ARM_DELAY_MS / 1000} s · ${escapeHtml(escape)} unlocks</p>`
@@ -810,6 +811,7 @@ async function boot() {
   [appVersion, autostart] = await Promise.all([api.version(), api.getAutostart()]);
   renderDurations();
   renderSettings();
+  await initSounds();
   islandPrefs = await api.islandPrefs().catch(() => islandPrefs);
   detect = await api.getAutoDetect().catch(() => detect);
   await api.onAutoDetect((d) => {

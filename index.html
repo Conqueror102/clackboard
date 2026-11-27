@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hushboard</title>
+    <title>Clackboard</title>
   </head>
   <body>
     <div class="app" id="app">
       <header class="app__header">
-        <div class="app__brand" id="brand"><span class="title">Hushboard</span></div>        <button class="hb-pill" type="button" id="status" aria-live="polite" disabled>Unlocked</button>
+        <div class="app__brand" id="brand"><span class="title">Clackboard</span></div>        <button class="hb-pill" type="button" id="status" aria-live="polite" disabled>Unlocked</button>
       </header>
 
       <main class="app__body">
@@ -16,6 +16,17 @@
         <section class="hb-stack" id="perms" hidden></section>
         <section class="hb-stack" id="notices" hidden></section>
         <div class="app__error" id="error" role="alert" hidden></div>
+
+        <section class="app__section" aria-labelledby="snd-label">
+          <h2 class="eyebrow" id="snd-label">Sounds</h2>
+          <div class="app__sounds" id="sounds"></div>
+          <p class="caption app__note" id="sounds-note" hidden></p>
+        </section>
+
+        <div class="app__group">
+          <h2 class="app__group-title">Keyboard cleaning</h2>
+          <p class="caption">Lock the keyboard so you can wipe it without typing into whatever is open. Start it with the button at the bottom.</p>
+        </div>
 
         <section class="app__section" aria-labelledby="dur-label">
           <h2 class="eyebrow" id="dur-label">Unlock after</h2>

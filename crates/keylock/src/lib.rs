@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 mod detect;
+pub mod keycode;
 #[cfg(target_os = "linux")]
 mod linux;
 #[cfg(target_os = "macos")]
@@ -246,9 +247,14 @@ impl Drop for Lock {
     }
 }
 
+/// Watches for a cloth wiping across the keys (many keys at once) and reports it, so a lock can
+/// start by itself. macOS uses its own event tap or the keyboard helper; Windows and Linux use
+/// the pass-through key listener.
 pub struct Monitor {
     #[cfg(target_os = "macos")]
     inner: macos::Monitor,
+    #[cfg(any(windows, target_os = "linux"))]
+    _listener: Listener,
 }
 
 #[cfg(target_os = "macos")]
@@ -262,7 +268,9 @@ impl Monitor {
     pub fn alive(&self) -> bool {
         #[cfg(target_os = "macos")]
         return self.inner.alive();
-        #[cfg(not(target_os = "macos"))]
+        #[cfg(any(windows, target_os = "linux"))]
+        return true;
+        #[cfg(not(any(target_os = "macos", windows, target_os = "linux")))]
         false
     }
 
@@ -274,7 +282,13 @@ impl Monitor {
     }
 }
 
-pub const CAN_MONITOR: bool = cfg!(target_os = "macos");
+pub const CAN_MONITOR: bool = cfg!(any(target_os = "macos", windows, target_os = "linux"));
+
+/// A small stable number for a key name, for the detector.
+#[allow(dead_code)]
+fn key_id(code: &str) -> u32 {
+    code.bytes().fold(2166136261u32, |h, b| (h ^ b as u32).wrapping_mul(16777619))
+}
 
 pub fn monitor<F>(on_cleaning: F) -> Result<Monitor, Error>
 where
@@ -284,7 +298,29 @@ where
     {
         macos::monitor(Arc::new(on_cleaning)).map(|inner| Monitor { inner })
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(any(windows, target_os = "linux"))]
+    {
+        use detect::{Detector, Edge};
+        let detector = std::sync::Mutex::new(Detector::default());
+        let listener = listen(move |k: KeyEvent| {
+            // Shortcuts and games hold several modifiers at once; a cloth hits the letters.
+            if matches!(
+                k.code,
+                "ShiftLeft" | "ShiftRight" | "ControlLeft" | "ControlRight" | "AltLeft" | "AltRight" | "MetaLeft"
+                    | "MetaRight" | "CapsLock" | "Fn"
+            ) {
+                return;
+            }
+            let id = key_id(k.code);
+            let edge = if k.down { Edge::Down(id) } else { Edge::Up(id) };
+            let fired = detector.lock().map(|mut d| d.push(std::time::Instant::now(), edge)).unwrap_or(false);
+            if fired {
+                on_cleaning();
+            }
+        })?;
+        Ok(Monitor { _listener: listener })
+    }
+    #[cfg(not(any(target_os = "macos", windows, target_os = "linux")))]
     {
         let _ = on_cleaning;
         Err(Error::Unsupported("detecting cleaning is not available on this system yet".into()))
@@ -358,6 +394,85 @@ where
 {
     let inner = platform::engage(options, Arc::new(on_event))?;
     Ok(Lock { inner })
+}
+
+// ---------- Listening (keys pass through untouched) ----------
+
+/// A physical key went down or came up. Auto-repeat is filtered out: a held key gives one
+/// `down`, then one `up`. Only the key's position is reported, never the character it types.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct KeyEvent {
+    /// W3C `KeyboardEvent.code` name ("KeyA", "Space"), or "Unidentified".
+    pub code: &'static str,
+    pub down: bool,
+}
+
+pub(crate) type KeySink = Arc<dyn Fn(KeyEvent) + Send + Sync + 'static>;
+
+/// This platform can listen to keys (macOS comes in a later version).
+pub const CAN_LISTEN: bool = cfg!(any(windows, target_os = "linux"));
+
+/// A running key listener. Stops when dropped.
+pub struct Listener {
+    #[cfg(any(windows, target_os = "linux"))]
+    inner: platform::Listener,
+}
+
+impl Listener {
+    pub fn stop(self) {}
+}
+
+#[cfg(any(windows, target_os = "linux"))]
+impl Drop for Listener {
+    fn drop(&mut self) {
+        self.inner.stop();
+    }
+}
+
+/// Hear every key press and release without blocking it, for sounds. `on_key` runs on the
+/// listener's own thread (on Windows, inside the keyboard hook): keep it very short.
+///
+/// * Windows: a pass-through `WH_KEYBOARD_LL` hook. No permission needed.
+/// * Linux: reads `/dev/input/event*` keyboards without grabbing them (the `input` group).
+pub fn listen<F>(on_key: F) -> Result<Listener, Error>
+where
+    F: Fn(KeyEvent) + Send + Sync + 'static,
+{
+    #[cfg(any(windows, target_os = "linux"))]
+    {
+        platform::listen(Arc::new(on_key)).map(|inner| Listener { inner })
+    }
+    #[cfg(not(any(windows, target_os = "linux")))]
+    {
+        let _ = on_key;
+        Err(Error::Unsupported("keyboard sounds are not available on this system yet".into()))
+    }
+}
+
+/// Remembers which keys are held, so auto-repeat can be dropped. Indexed by a small key id.
+#[allow(dead_code)]
+pub(crate) struct Held([std::sync::atomic::AtomicU64; 8]);
+
+#[allow(dead_code)]
+impl Held {
+    pub const fn new() -> Self {
+        use std::sync::atomic::AtomicU64;
+        Self([const { AtomicU64::new(0) }; 8])
+    }
+    /// Record a transition; returns false when nothing changed (a repeat, or a stray up).
+    pub fn set(&self, id: usize, down: bool) -> bool {
+        use std::sync::atomic::Ordering::Relaxed;
+        let id = id % 512;
+        let bit = 1u64 << (id % 64);
+        let word = &self.0[id / 64];
+        let was = if down { word.fetch_or(bit, Relaxed) } else { word.fetch_and(!bit, Relaxed) };
+        (was & bit != 0) != down
+    }
+    pub fn clear(&self) {
+        for w in &self.0 {
+            w.store(0, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
 }
 
 /// Tracks Ctrl and Alt so the escape shortcut can be recognised from raw key events.

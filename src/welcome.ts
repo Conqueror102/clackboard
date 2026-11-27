@@ -51,7 +51,7 @@ function introStep(): Step {
     id: "intro",
     html: () => `
       <div class="wl__art wl__hero" aria-hidden="true"><span class="wl__ring"></span><span class="wl__ring wl__ring--2"></span>${markSvg()}</div>
-      <h1 class="wl__title" tabindex="-1">Welcome to Hushboard</h1>
+      <h1 class="wl__title" tabindex="-1">Welcome to Clackboard</h1>
       <p class="wl__text">Lock your keyboard while you clean it. Your mouse and trackpad keep working.</p>`,
     next: () => ({ label: "Get started", kind: "primary" }),
   };
@@ -106,7 +106,7 @@ function defaultsStep(): Step {
 }
 
 function doneStep(): Step {
-  const title = `Hushboard lives in your ${where()}`;
+  const title = `Clackboard lives in your ${where()}`;
   const text =
     platform === "windows"
       ? "Click the icon to open it, or right-click to lock in one step. If you don't see it, try the ^ arrow."
@@ -123,7 +123,7 @@ function doneStep(): Step {
       </div>
       <h1 class="wl__title" tabindex="-1">${title}</h1>
       <p class="wl__text">${text}</p>`,
-    next: () => ({ label: "Open Hushboard", kind: "primary" }),
+    next: () => ({ label: "Open Clackboard", kind: "primary" }),
   };
 }
 
@@ -144,7 +144,7 @@ function tasks(p: Permissions): TaskView[] {
         state: done ? "done" : "active",
         title: "Allow access to your keyboards",
         meta: done
-          ? "Hushboard can read your keyboards."
+          ? "Clackboard can read your keyboards."
           : `Run this, then log out and back in.<code class="wl__cmd">sudo usermod -aG input $USER</code>`,
         action: done ? "" : `<button class="hb-btn hb-btn--secondary" type="button" data-action="copy-cmd">Copy</button>`,
       },
@@ -166,7 +166,7 @@ function tasks(p: Permissions): TaskView[] {
       key: "allow",
       state: approved ? "done" : installed ? "active" : "todo",
       title: "Allow it in Input Monitoring",
-      meta: approved ? "Allowed." : "Switch on Hushboard Keyboard Helper. Hushboard notices on its own.",
+      meta: approved ? "Allowed." : "Switch on Hushboard Keyboard Helper. Clackboard notices on its own.",
       action:
         installed && !approved
           ? `<button class="hb-btn hb-btn--primary" type="button" data-action="helper-settings">Open settings</button>`
@@ -220,7 +220,7 @@ function renderSetup() {
   const t = nowReady ? "The keyboard lock is ready" : platform === "linux" ? "Allow keyboard access" : "Set up the keyboard lock";
   const x = nowReady
     ? "Nothing you type is recorded. You can change this later from the panel."
-    : "Hushboard needs this once so the lock works everywhere. Nothing you type is recorded.";
+    : "Clackboard needs this once so the lock works everywhere. Nothing you type is recorded.";
   if (title.textContent !== t) title.textContent = t;
   if (text.textContent !== x) text.textContent = x;
   updateFooter();
@@ -237,7 +237,7 @@ function renderDefaults() {
     ).join("");
     list.innerHTML = [
       switchRow("autostart", "Open at login", "Start quietly in the " + where(), "login-03"),
-      switchRow("sound", "Launch sound", "A soft sound when Hushboard opens", "sparkles"),
+      switchRow("sound", "Launch sound", "A soft sound when Clackboard opens", "sparkles"),
     ].join("");
   }
   for (const b of Array.from(seg.children) as HTMLButtonElement[]) {

@@ -46,6 +46,30 @@ const simUpdate: UpdateInfo | null =
     ? { version: "0.1.0-beta.2", currentVersion: "0.1.0-beta.1", notes: "Fixes and improvements." }
     : null;
 
+export interface SoundPrefs {
+  enabled: boolean;
+  pack: string;
+  volume: number;
+  release: boolean;
+  stereo: boolean;
+  varyPitch: boolean;
+}
+
+export interface SoundPack {
+  id: string;
+  name: string;
+  builtin: boolean;
+  hasRelease: boolean;
+}
+
+export interface SoundInfo {
+  prefs: SoundPrefs;
+  packs: SoundPack[];
+  supported: boolean;
+  listening: boolean;
+  error: string | null;
+}
+
 export interface IslandPrefs {
   width: number | null;
   radius: number | null;
@@ -218,11 +242,33 @@ const simSystem: SystemState = {
       : [{ id: "all", name: "All keyboards", kind: "all" }],
 };
 
+let simSound: SoundInfo = {
+  prefs: { enabled: true, pack: "eg-oreo", volume: 0.7, release: true, stereo: true, varyPitch: true },
+  packs: [
+    { id: "cherrymx-blue-abs", name: "CherryMX Blue - ABS keycaps", builtin: true, hasRelease: true },
+    { id: "eg-oreo", name: "EG Oreo", builtin: true, hasRelease: true },
+    { id: "topre-purple-hybrid-pbt", name: "Topre Purple Hybrid - PBT keycaps", builtin: true, hasRelease: true },
+  ],
+  supported: true,
+  listening: true,
+  error: null,
+};
 let simIsland: IslandPrefs = { width: null, radius: null, scale: null, layer: null };
 let simDetect: DetectInfo = { enabled: false, supported: true, running: false, needsPermission: false };
 
 // ---------- public API ----------
 export const api = {
+  getSound: (): Promise<SoundInfo> => (inTauri ? call("get_sound") : Promise.resolve(simSound)),
+
+  setSound: (prefs: SoundPrefs): Promise<SoundInfo> => {
+    if (!inTauri) simSound = { ...simSound, prefs, listening: prefs.enabled };
+    return inTauri ? call("set_sound", { prefs }) : Promise.resolve(simSound);
+  },
+
+  soundDemo: (): Promise<void> => (inTauri ? call("sound_demo") : Promise.resolve()),
+
+  openPacksFolder: (): Promise<void> => (inTauri ? call("open_packs_folder") : Promise.resolve()),
+
   getState: (): Promise<LockState> => (inTauri ? call("get_state") : Promise.resolve(sim.get())),
 
   /** Permissions + keyboards now. `thorough` also re-verifies the helper's permission (slower). */

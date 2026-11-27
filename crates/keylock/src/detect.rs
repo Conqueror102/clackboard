@@ -1,8 +1,10 @@
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
-const WINDOW: Duration = Duration::from_millis(500);
-const SPREAD_KEYS: usize = 9;
+/// A sweep: this many different keys within `WINDOW`. A cloth crosses 8 keys in about 250 ms;
+/// even very fast typing (about 190 words a minute) spreads 8 keys over 440 ms or more.
+const WINDOW: Duration = Duration::from_millis(400);
+const SPREAD_KEYS: usize = 8;
 const PILE_KEYS: usize = 4;
 const HOLD_LIMIT: Duration = Duration::from_millis(1500);
 
@@ -132,6 +134,20 @@ mod tests {
     }
 
     #[test]
+    fn a_quick_swipe_along_one_row_is_detected() {
+        // A cloth across Q W E R T Y U I: 8 keys, 35 ms apart, each down for 60 ms.
+        let keys: Vec<u32> = (20..28).collect();
+        assert!(typing(&keys, 35, 60) >= 1);
+    }
+
+    #[test]
+    fn a_light_swipe_that_never_holds_four_keys_is_detected() {
+        // A laptop keyboard may never report four keys down at once; a sweep still counts.
+        let keys: Vec<u32> = (30..38).collect();
+        assert!(typing(&keys, 45, 30) >= 1);
+    }
+
+    #[test]
     fn the_keyboard_reporting_too_many_keys_is_detected() {
         let mut run = Run::new();
         run.at(0, Edge::Overflow);
@@ -148,6 +164,26 @@ mod tests {
     fn very_fast_typing_is_not_detected() {
         let keys: Vec<u32> = (0..80).map(|i| (i * 5) % 26).collect();
         assert_eq!(typing(&keys, 65, 110), 0);
+    }
+
+    #[test]
+    fn a_real_sentence_typed_fast_is_not_detected() {
+        // ~170 words a minute, with quick bursts on common pairs, spaces included.
+        let text = "the quick brown fox jumps over the lazy dog while everyone watches quietly";
+        let keys: Vec<u32> = text.bytes().map(|b| b as u32).collect();
+        let mut events: Vec<(u64, Edge)> = Vec::new();
+        let mut at = 0u64;
+        for (i, k) in keys.iter().enumerate() {
+            events.push((at, Edge::Down(*k)));
+            events.push((at + 95, Edge::Up(*k)));
+            at += if i % 3 == 0 { 40 } else { 75 };
+        }
+        events.sort_by_key(|(at, e)| (*at, matches!(e, Edge::Down(_))));
+        let mut run = Run::new();
+        for (at, e) in events {
+            run.at(at, e);
+        }
+        assert_eq!(run.hits, 0);
     }
 
     #[test]

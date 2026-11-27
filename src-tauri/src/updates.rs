@@ -16,6 +16,10 @@ use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_updater::{Update, UpdaterExt};
 
+/// Off until Clackboard has its own signed release feed: the feed in tauri.conf.json is still
+/// Hushboard's, and its updates would replace this app with Hushboard.
+const FEED_READY: bool = false;
+
 const FIRST_CHECK_AFTER: Duration = Duration::from_secs(20);
 const CHECK_EVERY: Duration = Duration::from_secs(6 * 60 * 60);
 
@@ -35,6 +39,9 @@ fn idle(app: &AppHandle) -> bool {
 }
 
 async fn check(app: &AppHandle) -> Result<Option<UpdateInfo>, String> {
+    if !FEED_READY {
+        return Ok(None);
+    }
     let found = match app.updater().map_err(|e| e.to_string())?.check().await {
         Ok(found) => found,
         // The feed answered without a manifest (404): nothing has been published to it yet,
@@ -60,7 +67,7 @@ async fn check(app: &AppHandle) -> Result<Option<UpdateInfo>, String> {
 
 /// Background checks: shortly after launch, then every 6 hours, skipped while locked.
 pub fn spawn_checker(app: AppHandle) {
-    if cfg!(debug_assertions) {
+    if cfg!(debug_assertions) || !FEED_READY {
         return; // development builds don't update themselves
     }
     std::thread::Builder::new()

@@ -1,7 +1,7 @@
 [package]
 name = "hushboard"
 version = "1.0.0"
-description = "Lock the keyboard while you clean it."
+description = "Mechanical keyboard sounds, and a keyboard lock for cleaning."
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/tekcify/hushboard"
@@ -21,6 +21,8 @@ keylock = { path = "../crates/keylock" }
 # Signed in-app updates from GitHub Releases, and "Start at login".
 tauri-plugin-updater = "2"
 tauri-plugin-autostart = "2"
+# Keyboard sounds: decoding packs (ogg, wav, mp3, flac) and audio output (cpal).
+rodio = "0.20"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 # Window level above the menu bar for the notch island, and notch detection.

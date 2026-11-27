@@ -6,6 +6,7 @@
 //! button or Ctrl + Alt + U) → Idle.
 
 mod shell;
+mod sound;
 mod updates;
 
 use serde::Serialize;
@@ -21,10 +22,12 @@ const MAX_LOCK: Duration = Duration::from_secs(10 * 60);
 const TICK: Duration = Duration::from_millis(200);
 /// The design system's `arm-delay` token, for locks started from the tray menu.
 const ARM_DELAY_MS: u64 = 3000;
-const AUTO_ARM_DELAY_MS: u64 = 1500;
+/// A detected wipe locks almost at once: every moment of countdown is more typing.
+const AUTO_ARM_DELAY_MS: u64 = 600;
 const AUTO_LOCK_SECS: u64 = 120;
-const QUIET_AFTER_UNLOCK: Duration = Duration::from_secs(10);
-const QUIET_AFTER_DETECT: Duration = Duration::from_secs(15);
+/// After an unlock (or Cancel), ignore wipes briefly so the last swipe doesn't re-lock at once.
+const QUIET_AFTER_UNLOCK: Duration = Duration::from_secs(3);
+const QUIET_AFTER_DETECT: Duration = Duration::from_secs(4);
 /// How long the island shows "Unlocked" before folding away.
 const DONE_FOR: Duration = Duration::from_secs(2);
 
@@ -157,7 +160,7 @@ fn open_overlays(app: &AppHandle) {
         let pos = m.position().to_logical::<f64>(scale);
         let size = m.size().to_logical::<f64>(scale);
         let built = WebviewWindowBuilder::new(app, format!("overlay-{i}"), WebviewUrl::App("overlay.html".into()))
-            .title("Hushboard: keyboard locked")
+            .title("Clackboard: keyboard locked")
             .position(pos.x, pos.y)
             .inner_size(size.width, size.height)
             .decorations(false)
@@ -740,6 +743,7 @@ pub fn run() {
             monitor_error: None,
             quiet_until: None,
         })))
+        .manage(sound::SoundState::new())
         .setup(|app| {
             shell::init_platform(app);
             shell::load_island_prefs(app.handle());
@@ -761,6 +765,7 @@ pub fn run() {
             }
             updates::spawn_checker(app.handle().clone());
             spawn_system_watcher(app.handle().clone());
+            sound::init(app.handle());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -791,10 +796,14 @@ pub fn run() {
             updates::check_for_update,
             updates::install_update,
             updates::get_autostart,
-            updates::set_autostart
+            updates::set_autostart,
+            sound::get_sound,
+            sound::set_sound,
+            sound::sound_demo,
+            sound::open_packs_folder
         ])
         .build(tauri::generate_context!())
-        .expect("error while building Hushboard")
+        .expect("error while building Clackboard")
         .run(|app, event| {
             #[cfg(target_os = "macos")]
             if let tauri::RunEvent::Reopen { .. } = event {
