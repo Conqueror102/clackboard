@@ -138,21 +138,26 @@
             <h3>macOS</h3>
             <p class="muted">macOS 11 or later, Apple silicon and Intel.</p>
             <p>Asks once for <b>Input Monitoring</b> so it can hear which keys you press. Silent while you type a password.</p>
-            <a class="btn btn--secondary" href="https://github.com/Conqueror102/clackboard/releases/latest">Download .dmg</a>
+            <a class="btn btn--secondary" data-asset="dmg" href="https://github.com/Conqueror102/clackboard/releases/latest">Download .dmg</a>
           </article>
           <article class="platform" data-os="win">
             <h3>Windows</h3>
             <p class="muted">Windows 10 and 11.</p>
             <p>Nothing to allow. Installs for your account only, no administrator needed.</p>
-            <a class="btn btn--secondary" href="https://github.com/Conqueror102/clackboard/releases/latest">Download .exe</a>
+            <a class="btn btn--secondary" data-asset="exe" href="https://github.com/Conqueror102/clackboard/releases/latest">Download .exe</a>
           </article>
           <article class="platform" data-os="linux">
             <h3>Linux</h3>
             <p class="muted">.deb, .rpm or AppImage, X11 and Wayland.</p>
             <p>Needs read access to keyboards: <code>sudo usermod -aG input $USER</code>, then log in again.</p>
-            <a class="btn btn--secondary" href="https://github.com/Conqueror102/clackboard/releases/latest">Download for Linux</a>
+            <div class="platform__links">
+              <a class="btn btn--secondary" data-asset="deb" href="https://github.com/Conqueror102/clackboard/releases/latest">.deb</a>
+              <a class="btn btn--secondary" data-asset="rpm" href="https://github.com/Conqueror102/clackboard/releases/latest">.rpm</a>
+              <a class="btn btn--secondary" data-asset="appimage" href="https://github.com/Conqueror102/clackboard/releases/latest">AppImage</a>
+            </div>
           </article>
         </div>
+        <p class="muted center release-line" id="release-line"><a href="https://github.com/Conqueror102/clackboard/releases/latest">All files and checksums</a></p>
         <p class="muted center">Builds aren't signed by Apple or Microsoft yet, so your system asks once before opening. The <a href="https://github.com/Conqueror102/clackboard/blob/main/docs/installing.md">install guide</a> shows how.</p>
       </section>
 

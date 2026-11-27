@@ -222,10 +222,31 @@ document.getElementById("volume").addEventListener("input", (e) => {
 // Fetch the first switch once the page is idle, so the first key already sounds.
 (window.requestIdleCallback || ((f) => setTimeout(f, 600)))(() => choose(current));
 
-// ---------- Download button ----------
+// ---------- Downloads ----------
+// Every button starts as a link to the release page; once the latest release is known, each
+// one points straight at its file, so a click starts the download.
 const ua = navigator.userAgent;
-const os = /Mac/.test(navigator.platform || ua) ? "mac" : /Win/.test(navigator.platform || ua) ? "win" : /Linux|X11/.test(ua) && !/Android/.test(ua) ? "linux" : null;
+const mobile = /Android|iPhone|iPad|iPod/.test(ua);
+const os = mobile
+  ? null
+  : /Mac/.test(navigator.platform || ua)
+    ? "mac"
+    : /Win/.test(navigator.platform || ua)
+      ? "win"
+      : /Linux|X11|CrOS/.test(ua)
+        ? "linux"
+        : null;
 const OS_NAME = { mac: "macOS", win: "Windows", linux: "Linux" };
+// Which file each button gets. Linux's main button picks the .deb (most desktops).
+const ASSETS = {
+  dmg: /_universal\.dmg$/,
+  exe: /_x64-setup\.exe$/,
+  deb: /_amd64\.deb$/,
+  rpm: /\.x86_64\.rpm$/,
+  appimage: /_amd64\.AppImage$/,
+};
+const MAIN_ASSET = { mac: "dmg", win: "exe", linux: "deb" };
+
 if (os) {
   document.getElementById("download-label").textContent = `Download for ${OS_NAME[os]}`;
   document.querySelector(`.platform[data-os="${os}"]`)?.classList.add("is-you");
@@ -233,4 +254,43 @@ if (os) {
     .filter(([k]) => k !== os)
     .map(([, v]) => v)
     .join(" and ")}: <a href="#download">all downloads</a>.`;
+} else {
+  // Phones and tablets can't run it: send people to the download list instead.
+  const main = document.getElementById("download-main");
+  main.href = "#download";
+  document.getElementById("download-label").textContent = "Get it for your computer";
 }
+
+const mb = (bytes) => `${Math.round(bytes / 1048576)} MB`;
+
+fetch("https://api.github.com/repos/Conqueror102/clackboard/releases/latest", {
+  headers: { Accept: "application/vnd.github+json" },
+})
+  .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+  .then((release) => {
+    const find = (key) => release.assets.find((a) => ASSETS[key].test(a.name));
+    for (const link of document.querySelectorAll("[data-asset]")) {
+      const asset = find(link.dataset.asset);
+      if (!asset) continue;
+      link.href = asset.browser_download_url;
+      link.setAttribute("download", "");
+      link.title = `${asset.name} (${mb(asset.size)})`;
+    }
+    if (os) {
+      const asset = find(MAIN_ASSET[os]);
+      if (asset) {
+        const main = document.getElementById("download-main");
+        main.href = asset.browser_download_url;
+        main.title = asset.name;
+        document.getElementById("download-label").innerHTML =
+          `Download for ${OS_NAME[os]} <small>${release.tag_name} · ${mb(asset.size)}</small>`;
+      }
+    }
+    const line = document.getElementById("release-line");
+    if (line) {
+      line.innerHTML = `Latest: <b>${release.tag_name}</b> · <a href="${release.html_url}">release notes, all files and checksums</a>`;
+    }
+  })
+  .catch(() => {
+    // Offline or rate-limited: the buttons keep pointing at the release page.
+  });
