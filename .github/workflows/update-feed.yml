@@ -4,9 +4,9 @@
 # releases a maintainer has published, never at a draft.
 name: Update feed
 
+# Manual only for now: Clackboard has no update-signing key yet, so releases carry no
+# latest.json. Add `release: types: [published]` back once in-app updates are set up.
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       tag:

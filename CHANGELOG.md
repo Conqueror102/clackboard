@@ -2,7 +2,7 @@
 
 All notable changes to Hushboard are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
-## Clackboard (unreleased)
+## Clackboard 0.1.0
 
 Clackboard is a fork of Hushboard that adds mechanical keyboard sounds.
 

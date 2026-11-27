@@ -1,6 +1,6 @@
 [package]
 name = "clackboard"
-version = "1.0.0"
+version = "0.1.0"
 description = "Mechanical keyboard sounds, and a keyboard lock for cleaning."
 edition = "2021"
 license = "MIT"

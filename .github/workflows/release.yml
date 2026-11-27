@@ -89,7 +89,8 @@ jobs:
           releaseName: Clackboard ${{ env.TAG }}
           releaseDraft: true
           prerelease: ${{ contains(env.TAG, '-') }}
-          includeUpdaterJson: true
+          # No in-app updates yet (no update-signing key), so no latest.json.
+          includeUpdaterJson: false
           args: ${{ steps.bundles.outputs.args }}
           releaseBody: |
             **Beta builds aren't signed by Apple or Microsoft yet**, so your system warns you the first time you open Clackboard. That's expected. Step-by-step instructions: [Installing Clackboard](https://github.com/Conqueror102/clackboard/blob/main/docs/installing.md).
@@ -102,7 +103,9 @@ jobs:
             | `Clackboard_*_amd64.deb` | Ubuntu, Debian, Mint, Pop!_OS |
             | `Clackboard-*.x86_64.rpm` | Fedora, openSUSE, RHEL (stable releases only; on a beta, use the AppImage) |
 
-            Check your download against `SHA256SUMS.txt`. Once installed, Clackboard updates itself.
+            Check your download against `SHA256SUMS.txt`. To update, download the newest release; in-app updates come later.
+
+            macOS asks for **Input Monitoring** once so key sounds can play. Linux needs read access to keyboards: `sudo usermod -aG input $USER`, then log in again.
 
             See the [changelog](https://github.com/Conqueror102/clackboard/blob/main/CHANGELOG.md) for what's new.
 
