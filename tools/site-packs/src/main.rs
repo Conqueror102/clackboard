@@ -5,7 +5,7 @@
 //! 16-bit WAV per pack plus a JSON map of key → [press, release] times in the new file.
 //!
 //! Run from the repo root:
-//!   cargo run -p site-packs --release -- src-tauri/resources/packs/keyboard site/packs eg-oreo …
+//!   cargo run -p site-packs --release -- src-tauri/resources/packs/keyboard website/public/packs eg-oreo …
 
 use rodio::Source;
 use serde_json::{json, Map, Value};

@@ -1,0 +1,334 @@
+@import "tailwindcss";
+
+/* Clackboard's dark palette (design-system/project/tokens.json). The site is dark only. */
+:root {
+  color-scheme: dark;
+  --surface: #0e1113;
+  --surface-raised: #171c1f;
+  --surface-sunken: #080a0b;
+  --ink: #e6efec;
+  --ink-muted: #97a6a1;
+  --line: #252e32;
+  --line-strong: #5f6d71;
+  --seal: #2ee6a8;
+  --seal-strong: #74f2c6;
+  --seal-edge: #139a71;
+  --on-seal: #03241a;
+  --suds: #10342a;
+  --on-suds: #9cf5d4;
+  --caution: #4ee4ad;
+  --key-face: #1d2428;
+  --key-edge: #040506;
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-seal: var(--seal);
+  --color-seal-strong: var(--seal-strong);
+  --color-seal-edge: var(--seal-edge);
+  --color-on-seal: var(--on-seal);
+  --color-suds: var(--suds);
+  --color-on-suds: var(--on-suds);
+  --color-caution: var(--caution);
+  --color-key-face: var(--key-face);
+  --color-key-edge: var(--key-edge);
+  --font-sans: var(--font-onest);
+  --font-mono: var(--font-jetbrains-mono);
+
+  /* FAQ scroller rows. The duration comes from each row's --scroll-duration. */
+  --animate-scroll-horizontal: scroll-horizontal var(--scroll-duration, 40s) linear infinite;
+  --animate-scroll-horizontal-reverse: scroll-horizontal-reverse var(--scroll-duration, 40s) linear infinite;
+
+  @keyframes scroll-horizontal {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  @keyframes scroll-horizontal-reverse {
+    0% { transform: translateX(-50%); }
+    100% { transform: translateX(0); }
+  }
+}
+
+/* ---------- Motion: scroll reveals and the hero entrance ----------
+   <Reveal> renders visible, then hides itself once it's running and comes back in when it
+   scrolls into view: it rises a little, comes into focus and fades in. */
+
+:root {
+  --ease-reveal: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-reveal-state="hidden"] {
+  opacity: 0;
+  translate: 0 28px;
+  filter: blur(8px);
+}
+
+/* Big blocks also grow slightly as they arrive. */
+[data-reveal="scale"][data-reveal-state="hidden"] {
+  translate: 0 40px;
+  scale: 0.96;
+}
+
+/* Small items like labels and pills only lift a touch. */
+[data-reveal="soft"][data-reveal-state="hidden"] {
+  translate: 0 12px;
+  filter: blur(4px);
+}
+
+[data-reveal-state="in"] {
+  transition:
+    opacity 0.9s var(--ease-reveal),
+    translate 1.1s var(--ease-reveal),
+    scale 1.1s var(--ease-reveal),
+    filter 0.9s var(--ease-reveal);
+  transition-delay: var(--d, 0ms);
+}
+
+/* The hero plays once on load, top to bottom. */
+.hero-rise {
+  animation: hero-rise 1.1s var(--ease-reveal) both;
+  animation-delay: var(--d, 0ms);
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    translate: 0 24px;
+    filter: blur(10px);
+  }
+}
+
+.hero-rise-scale {
+  animation: hero-rise-scale 1.4s var(--ease-reveal) both;
+  animation-delay: var(--d, 0ms);
+}
+
+@keyframes hero-rise-scale {
+  from {
+    opacity: 0;
+    translate: 0 60px;
+    scale: 0.94;
+    filter: blur(6px);
+  }
+}
+
+/* Fade the FAQ rows out at both ends so cards slide in and out softly. */
+.scroller-mask {
+  mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 96px;
+}
+
+body {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+/* The arrow cursor (GyroCursor) replaces the system one on mice and trackpads. */
+.gyro-cursor,
+.gyro-cursor * {
+  cursor: none !important;
+}
+
+.gyro-arrow {
+  color: var(--seal);
+  will-change: transform;
+}
+
+.gyro-arrow[data-hover="true"] {
+  color: var(--seal-strong);
+}
+
+::selection {
+  background: var(--seal);
+  color: var(--on-seal);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* A faint dot grid behind sections, like a desk mat. */
+.dot-grid {
+  background-image: radial-gradient(circle at 1px 1px, #e4ebed12 1px, transparent 0);
+  background-size: 22px 22px;
+}
+
+/* ---------- Keycaps ---------- */
+
+.keycap {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  border-radius: 0.9cqw;
+  border: 1px solid #2d3436;
+  background: linear-gradient(160deg, #272d2f, var(--key-face) 60%);
+  box-shadow: inset 0 1px #ffffff14, 0 0.5cqw var(--key-edge);
+  color: #b4c0c4;
+  font: 600 clamp(0.42rem, 1.55cqw, 0.78rem) / 1 var(--font-jetbrains-mono), monospace;
+  transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.12s, border-color 0.18s;
+}
+
+.keycap.on {
+  background: var(--seal);
+  border-color: var(--seal-strong);
+  color: var(--on-seal);
+  transform: translateY(0.4cqw);
+  box-shadow: 0 0 2.4cqw #61ecb980, 0 0.1cqw var(--key-edge);
+}
+
+/* ---------- Hero scene ---------- */
+
+.scene-deck {
+  container-type: inline-size;
+}
+
+.scene-keys {
+  transform: perspective(1400px) rotateX(14deg);
+  transform-origin: top center;
+}
+
+.cloth {
+  position: absolute;
+  pointer-events: none;
+  width: 30%;
+  height: 58%;
+  border-radius: 1.6cqw 2.4cqw 1.8cqw 1.2cqw;
+  /* A folded microfibre cloth in the brand clay: fine weave, a fold, a soft edge. */
+  background:
+    linear-gradient(104deg, transparent 54%, #00000030 55%, #ffffff1a 57%, transparent 60%),
+    radial-gradient(circle at 1px 1px, #ffffff22 0.6px, transparent 1px) 0 0 / 4px 4px,
+    linear-gradient(150deg, #7ef0c6, #4fd5a4 45%, #38b185);
+  box-shadow:
+    0 2.6cqw 4cqw #0a0c0cc0,
+    inset 0 0.4cqw 0 #ffffff30,
+    inset 0 -0.8cqw 1.4cqw #1b7a5766;
+  will-change: transform, opacity;
+}
+
+.cloth::after {
+  /* The corner of the cloth flopped over. */
+  content: "";
+  position: absolute;
+  right: -2%;
+  top: -6%;
+  width: 26%;
+  height: 34%;
+  border-radius: 0 1.4cqw 0 1.6cqw;
+  background: linear-gradient(225deg, #98f6d3, #42c494);
+  box-shadow: -0.4cqw 0.6cqw 1cqw #25414b66;
+  transform: rotate(8deg);
+}
+
+/* How it works, step 3: the cloth crosses the keys in 3.2s, lifts off, and starts again.
+   Each key lights as the cloth's middle passes it (its delay is set inline). */
+.wipe-cloth {
+  width: 28%;
+  height: 84%;
+  animation: wipe-cloth 4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+@keyframes wipe-cloth {
+  0% { left: -14%; opacity: 0; transform: rotate(-4deg); }
+  6% { opacity: 1; }
+  40% { transform: rotate(3deg); }
+  80% { left: 86%; opacity: 1; transform: rotate(-2deg); }
+  92%, 100% { left: 96%; opacity: 0; transform: rotate(-2deg); }
+}
+
+.wipe-key {
+  animation: wipe-key 4s linear infinite;
+}
+
+@keyframes wipe-key {
+  0% {
+    background: var(--seal);
+    border-color: var(--seal-strong);
+    color: var(--on-seal);
+    transform: translateY(0.4cqw);
+    box-shadow: 0 0 2.4cqw #61ecb980, 0 0.1cqw var(--key-edge);
+  }
+  14%, 100% {
+    background: linear-gradient(160deg, #272d2f, var(--key-face) 60%);
+    border-color: #2d3436;
+    color: #b4c0c4;
+    transform: none;
+    box-shadow: inset 0 1px #ffffff14, 0 0.5cqw var(--key-edge);
+  }
+}
+
+.island-letter {
+  animation: letter-in 0.5s ease-out both;
+}
+
+@keyframes letter-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.7);
+  }
+}
+
+.hold-fill {
+  animation: hold 2.6s ease-in-out infinite;
+}
+
+@keyframes hold {
+  0%, 15% { transform: scaleX(0); }
+  70%, 100% { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .island-letter,
+  .hold-fill,
+  .wipe-key,
+  .hero-rise,
+  .hero-rise-scale {
+    animation: none;
+  }
+  .wipe-cloth {
+    animation: none;
+    left: 40%;
+  }
+  /* FAQ rows stop moving and scroll by hand instead. */
+  .scroller-track {
+    animation: none;
+  }
+  .scroller-mask {
+    overflow-x: auto;
+  }
+  .keycap {
+    transition: none;
+  }
+}
+
+/* How it works, step 3: arcs come off the side of the desk the key sits on. */
+.sound-arcs {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+  pointer-events: none;
+  animation: sound-arcs 0.5s ease-out both;
+}
+
+@keyframes sound-arcs {
+  from { opacity: 1; translate: 0 -50%; }
+  to { opacity: 0; translate: 0 -50%; transform: scale(1.25); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sound-arcs { animation: none; }
+}

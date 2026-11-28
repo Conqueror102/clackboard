@@ -1,10 +1,11 @@
-# Publishes the website (the `site/` folder) to GitHub Pages whenever it changes on main.
+# Builds the website (website/, Next.js) as static files and publishes it to GitHub Pages
+# whenever it changes on main. GitHub Pages serves it under /clackboard.
 name: Website
 
 on:
   push:
     branches: [main]
-    paths: ["site/**", ".github/workflows/pages.yml"]
+    paths: ["website/**", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -22,11 +23,23 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    defaults:
+      run:
+        working-directory: website
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - run: npm ci
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_BASE_PATH: /clackboard
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: website/out
       - id: deployment
         uses: actions/deploy-pages@v4

@@ -17,7 +17,7 @@ The packs live in `src-tauri/resources/packs/keyboard/`, one folder per switch. 
 | NovelKeys Cream, Telios V2, Cherry MX Speed Silver, Typewriter (Mechvibes community); Banana Split, SteelSeries Apex Pro TKL (Akira); Logitech G915 TKL (Keyboard Sounds) | [Keyboard Sounds](https://github.com/nathan-fiscaletti/keyboardsounds) by Nathan Fiscaletti and contributors | GPL-3.0 (`LICENSE.txt` in each pack) |
 | IBM Model M | [bucklespring](https://github.com/zevv/bucklespring) by Ico Doornekamp | GPL-2.0 (`LICENSE.txt` in the pack) |
 
-The Keyboard Sounds and bucklespring recordings were converted with `tools/pack-import` (mixed to mono, silence trimmed, joined into one file per pack); the website's demo copies were made with `tools/site-packs`. Clackboard reads the Mechvibes pack format (V1 and V2), so more packs can be added from the panel.
+The Keyboard Sounds and bucklespring recordings were converted with `tools/pack-import` (mixed to mono, silence trimmed, joined into one file per pack); the website's demo copies (`website/public/packs`) were made with `tools/site-packs`. Clackboard reads the Mechvibes pack format (V1 and V2), so more packs can be added from the panel.
 
 ## Icons and fonts
 
